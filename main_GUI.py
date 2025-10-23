@@ -10,7 +10,6 @@ def main(page: ft.Page):
         "F_req": ft.TextField(label="要求推力 [N]", width=150),
         "Pc_def": ft.TextField(label="初期燃焼室圧力 [MPa]", width=150),
         "OF_def": ft.TextField(label="初期O/F比", width=150),
-        "epsilon_start": ft.TextField(label="初期膨張比", width=150),
         "mdot_new": ft.TextField(label="初期流量 [kg/s]", width=150),
         "eta_cstar": ft.TextField(label="C*効率", width=150),
         "eta_nozzle": ft.TextField(label="ノズル効率", width=150),

@@ -39,25 +39,32 @@ class RocketSimulation:
         self.F_fte_arr = np.array([])
         self.M_ox_arr = np.array([])
 
-    def initial_convergence(self, F_req, Pc_def, OF_def, epsilon_start, mdot_new, eta_cstar, eta_nozzle):
+    def initial_convergence(self, F_req, Pc_def, OF_def, mdot_new, eta_cstar, eta_nozzle):
         log = []
 
         # 入力パラメータの設定
         self.F_req = F_req * eta_cstar * eta_nozzle
         self.Pc_def = Pc_def
         self.OF_def = OF_def
-        self.epsilon_start = epsilon_start
-        self.epsilon_new = epsilon_start
         self.mdot_new = mdot_new
         self.mdot_old = mdot_new
         self.eta_cstar = eta_cstar
         self.eta_nozzle = eta_nozzle
         self.eta = eta_cstar * eta_nozzle
 
+        #epsilon 調整
+        (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
+         self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
+         self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, epsilon=1)
+        
+        self.epsilon_new = (2 / (self.gamma_tmp1 + 1)) ** (1 / (self.gamma_tmp1 - 1)) * ((self.Pc_def / self.Pa) ** (1 / self.gamma_tmp1)) / \
+        np.sqrt((self.gamma_tmp1 + 1) / (self.gamma_tmp1 - 1) * (1 -(self.Pa / self.Pc_def) ** ((self.gamma_tmp1 - 1) / self.gamma_tmp1 )) )
+        print("calcrated epsilon = ", self.epsilon_new, "[-]")
+
         # 初期CEA計算
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
          self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-         self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, self.epsilon_start)
+         self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, self.epsilon_new)
 
         self.Pe_old = self.Pe_tmp1
         self.diff_exit = 2

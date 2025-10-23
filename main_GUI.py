@@ -1,40 +1,63 @@
 import flet as ft
-import pandas as pd
-from scipy.interpolate import interp1d
-
-# CSV読み込みと補間関数の準備
-df = pd.read_csv("inputdatas\\N2O.csv")  # Temp, Pres, Dens の列がある前提
-
-# 圧力に対する温度・密度の補間関数を構築
-temp_interp = interp1d(df["Pres"], df["Temp"], kind="linear", fill_value="extrapolate")
-dens_interp = interp1d(df["Pres"], df["Dens"], kind="linear", fill_value="extrapolate")
+from inputprograms.rocket_simulation import RocketSimulation
 
 def main(page: ft.Page):
-    page.title = "気液平衡 補間検索（リアルタイム）"
+    page.title = "Rocket Simulation GUI"
     page.scroll = ft.ScrollMode.AUTO
 
-    pres_input = ft.TextField(label="圧力 [Pa]", width=200, on_change=lambda e: update_result())
-    result_text = ft.Text()
+    # 入力フィールド群
+    inputs = {
+        "F_req": ft.TextField(label="要求推力 [N]", width=150),
+        "Pc_def": ft.TextField(label="初期燃焼室圧力 [MPa]", width=150),
+        "OF_def": ft.TextField(label="初期O/F比", width=150),
+        "epsilon_start": ft.TextField(label="初期膨張比", width=150),
+        "mdot_new": ft.TextField(label="初期流量 [kg/s]", width=150),
+        "eta_cstar": ft.TextField(label="C*効率", width=150),
+        "eta_nozzle": ft.TextField(label="ノズル効率", width=150),
+    }
 
-    def update_result():
+    result_text = ft.Text()
+    graph_image = ft.Image(visible=False, expand=True)
+
+    def run_simulation(e):
         try:
-            input_pres = float(pres_input.value)
+            values = {k: float(inputs[k].value) for k in inputs}
         except ValueError:
-            result_text.value = "⚠️ 数値で圧力を入力してください"
+            result_text.value = "⚠️ 全ての値を数値で入力してください"
             page.update()
             return
 
-        temp = float(temp_interp(input_pres))
-        dens = float(dens_interp(input_pres))
+        sim = RocketSimulation()
+        output = sim.initial_convergence(**values)
+        result_text.value = output
 
-        result_text.value = (
-            f"🔍 入力圧力: {input_pres:.2f} Pa\n"
-            f"🌡️ 推定温度: {temp:.2f} K\n"
-            f"🧪 推定密度: {dens:.4f} kg/m³"
-        )
+        # グラフ表示
+        graph_image.src_base64 = sim.get_iteration_plot_base64()
+        graph_image.visible = True
         page.update()
 
-    page.add(pres_input, result_text)
+    # 左側：入力群
+    input_column = ft.Column(
+        controls=list(inputs.values()) + [ft.ElevatedButton("収束計算", on_click=run_simulation), result_text],
+        spacing=10
+    )
+
+    # 右側：グラフ
+    graph_column = ft.Column(
+        controls=[graph_image],
+        spacing=10,
+        alignment=ft.MainAxisAlignment.START
+    )   
+
+
+    # 横並びに配置
+    page.add(
+        ft.Row(
+            controls=[input_column, graph_column],
+            alignment=ft.MainAxisAlignment.START,  # 横並びの左寄せ
+            vertical_alignment=ft.CrossAxisAlignment.START
+        )
+    )
 
 
 ft.app(target=main)

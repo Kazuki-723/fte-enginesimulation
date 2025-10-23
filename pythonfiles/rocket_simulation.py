@@ -72,6 +72,15 @@ class RocketSimulation:
         self.M_ox_arr = np.array([])
         
     def initial_convergence(self):
+        print("-------------")
+        print("input data")
+        print("Requirement Thrust = ", self.F_req, "[N]")
+        print("initial chamber pressure = ", self.Pc_def, "[MPa]")
+        print("initial O/F = ", self.OF_def, "[-]")
+        print("initial epsilon = ", self.epsilon_start, "[-]")
+        print("initial Mdot propellant = ", self.mdot_new, "[kg/s]")
+        print("Cstar efficient = ", self.eta_cstar, "[-]")
+        print("Nozzle efficient = ", self.eta_nozzle, "[-]")
         #--------------------------#
         # 初期条件の収束
         #--------------------------#
@@ -124,13 +133,27 @@ class RocketSimulation:
             self.Dt = 2 * np.sqrt(self.At_new / math.pi)
             self.De = 2 * np.sqrt(self.Ae_new / math.pi)
 
+            # 一時表示
+            print("-------------")
+            print("Thrust = ", self.F, "[N]")
+            print("diff_F = ", self.diff_F, "[N]")
+            print("mdot = ", self.mdot_new, "[kg/s]")
+            print("Pe = ", self.Pe_tmp1, "[MPa]")
+            print("diff_atm = ", abs(self.diff_exit))
+            print("epsilon_new = ", self.epsilon_new)
+            print("Dt, De = ", self.Dt, self.De, "[m]")
+
             # 収束失敗時に脱出
             if self.diff_exit == 0.0:
                 self.i = self.i + 1
                 if self.i > 3:
                     print("収束失敗")
                     break
+        
+        self.Kstar = 0
+        self.Kstar = (self.OF_def / (self.OF_def + 1)) * self.mdot_new / np.sqrt(2 * self.rho_ox_init * ((self.Ptank_init - self.Pc_init) * 1000000))
 
+        print("-------------")
         print("Thrust = ", self.F, "[N]")
         print("diff_F = ", self.diff_F, "[N]")
         print("mdot = ", self.mdot_new, "[kg/s]")
@@ -138,6 +161,7 @@ class RocketSimulation:
         print("diff_atm = ", abs(self.diff_exit))
         print("epsilon_new = ", self.epsilon_new)
         print("Dt, De = ", self.Dt, self.De, "[m]")
+        print("Kstar = ", self.Kstar)
         print("END")
         print("-------------")
     
@@ -345,6 +369,9 @@ class RocketSimulation:
             writer = csv.writer(file, quoting=csv.QUOTE_NONE)
             writer.writerows(F_values)
     
+    def run_initialstate(self):
+        self.initial_convergence()
+
     def run_simulation(self):
         self.initial_convergence()
         self.integration_simulation()

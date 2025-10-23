@@ -52,7 +52,7 @@ Pc_def = 2.0  # 初期燃焼室圧 [MPa](初期状態の収束計算において
 OF_def = 6.5  # 仮OF [-]
 # 酸化剤流量に対してK*（discharge coef * crosssectional area orifice）が定まる
 
-epsilon_start = 3.3  # 仮開口比 [-]
+epsilon_start = 10  # 仮開口比 [-]
 epsilon_new = epsilon_start
 
 # 質量流量

@@ -10,13 +10,13 @@ temp_interp = interp1d(df["Pres"], df["Temp"], kind="linear", fill_value="extrap
 dens_interp = interp1d(df["Pres"], df["Dens"], kind="linear", fill_value="extrapolate")
 
 def main(page: ft.Page):
-    page.title = "気液平衡 補間検索"
+    page.title = "気液平衡 補間検索（リアルタイム）"
     page.scroll = ft.ScrollMode.AUTO
 
-    pres_input = ft.TextField(label="圧力 [MPa]", width=200)
+    pres_input = ft.TextField(label="圧力 [Pa]", width=200, on_change=lambda e: update_result())
     result_text = ft.Text()
 
-    def search_data(e):
+    def update_result():
         try:
             input_pres = float(pres_input.value)
         except ValueError:
@@ -24,16 +24,17 @@ def main(page: ft.Page):
             page.update()
             return
 
-        # 補間による温度・密度の推定
         temp = float(temp_interp(input_pres))
         dens = float(dens_interp(input_pres))
 
-        result_text.value = f"🔍 入力圧力: {input_pres:.2f} MPa\n🌡️ 推定温度: {temp:.2f} K\n🧪 推定密度: {dens:.4f} kg/m³"
+        result_text.value = (
+            f"🔍 入力圧力: {input_pres:.2f} Pa\n"
+            f"🌡️ 推定温度: {temp:.2f} K\n"
+            f"🧪 推定密度: {dens:.4f} kg/m³"
+        )
         page.update()
 
-    page.add(
-        ft.Row([pres_input, ft.ElevatedButton("補間検索", on_click=search_data)]),
-        result_text
-    )
+    page.add(pres_input, result_text)
+
 
 ft.app(target=main)

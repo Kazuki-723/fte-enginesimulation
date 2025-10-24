@@ -5,58 +5,105 @@ def main(page: ft.Page):
     page.title = "Rocket Simulation GUI"
     page.scroll = ft.ScrollMode.AUTO
 
-    # 入力フィールド群
-    inputs = {
-        "F_req": ft.TextField(label="要求推力 [N]", width=150),
-        "Pc_def": ft.TextField(label="初期燃焼室圧力 [MPa]", width=150),
-        "OF_def": ft.TextField(label="初期O/F比", width=150),
-        "mdot_new": ft.TextField(label="初期流量 [kg/s]", width=150),
-        "eta_cstar": ft.TextField(label="C*効率", width=150),
-        "eta_nozzle": ft.TextField(label="ノズル効率", width=150),
-    }
-
-    result_text = ft.Text()
-    graph_image = ft.Image(visible=False, expand=True)
-
-    def run_simulation(e):
-        try:
-            values = {k: float(inputs[k].value) for k in inputs}
-        except ValueError:
-            result_text.value = "⚠️ 全ての値を数値で入力してください"
-            page.update()
-            return
-
-        sim = RocketSimulation()
-        output = sim.initial_convergence(**values)
-        result_text.value = output
-
-        # グラフ表示
-        graph_image.src_base64 = sim.get_iteration_plot_base64()
-        graph_image.visible = True
+    # ページ切り替え処理
+    def route_change(route):
+        page.views.clear()
+        if page.route == "/":
+            page.views.append(main_view())
+        elif page.route == "/evolution":
+            page.views.append(evolution_view())
         page.update()
 
-    # 左側：入力群
-    input_column = ft.Column(
-        controls=list(inputs.values()) + [ft.ElevatedButton("収束計算", on_click=run_simulation), result_text],
-        spacing=10
-    )
+    page.on_route_change = route_change
+    page.go("/")
 
-    # 右側：グラフ
-    graph_column = ft.Column(
-        controls=[graph_image],
-        spacing=10,
-        alignment=ft.MainAxisAlignment.START
-    )   
+    # メインビュー（初期条件＋収束）
+    def main_view():
+        inputs = {
+            "F_req": ft.TextField(label="要求推力 [N]", width=150),
+            "Pc_def": ft.TextField(label="初期燃焼室圧力 [MPa]", width=150),
+            "OF_def": ft.TextField(label="初期O/F比", width=150),
+            "mdot_new": ft.TextField(label="初期流量 [kg/s]", width=150),
+            "eta_cstar": ft.TextField(label="C*効率", width=150),
+            "eta_nozzle": ft.TextField(label="ノズル効率", width=150),
+        }
 
+        result_text = ft.Text()
+        graph_image = ft.Image(visible=False, width=page.window_width - 200)
 
-    # 横並びに配置
-    page.add(
-        ft.Row(
-            controls=[input_column, graph_column],
-            alignment=ft.MainAxisAlignment.START,  # 横並びの左寄せ
-            vertical_alignment=ft.CrossAxisAlignment.START
+        def run_simulation(e):
+            try:
+                values = {k: float(inputs[k].value) for k in inputs}
+            except ValueError:
+                result_text.value = "⚠️ 全ての値を数値で入力してください"
+                page.update()
+                return
+
+            sim = RocketSimulation()
+            output = sim.initial_convergence(**values)
+            result_text.value = output
+
+            graph_image.src_base64 = sim.get_iteration_plot_base64()
+            graph_image.visible = True
+
+            page.session.set("initial_conditions", values)  # 初期条件保存
+            page.update()
+        
+        # 実行ボタンと遷移ボタンを並べる
+        action_row = ft.Row([
+            ft.ElevatedButton("収束計算", on_click=run_simulation),
+            ft.TextButton("▶ 時間発展ページへ", on_click=lambda _: page.go("/evolution"))
+        ])
+
+        # 左側：入力群＋結果＋ボタン群＋ログ
+        input_column = ft.Column(
+            controls=[
+                *list(inputs.values()),
+                action_row,
+                result_text
+            ],
+            spacing=10,
+            expand=True,
+            height=page.window_height + 100,
+            scroll=ft.ScrollMode.AUTO
         )
-    )
 
+        graph_column = ft.Column(
+            controls=[graph_image],
+            spacing=10,
+            alignment=ft.MainAxisAlignment.START
+        )
+
+        return ft.View(
+            route="/",
+            controls=[
+                ft.Row(
+                    controls=[input_column, graph_column],
+                    alignment=ft.MainAxisAlignment.START,
+                    vertical_alignment=ft.CrossAxisAlignment.START
+                )
+            ]
+        )
+
+    # 時間発展ビュー（別ページ）
+    def evolution_view():
+        initial = page.session.get("initial_conditions")
+        if not initial:
+            return ft.View(route="/evolution", controls=[
+                ft.Text("⚠️ 初期条件が未設定です"),
+                ft.TextButton("◀ 戻る", on_click=lambda _: page.go("/"))
+            ])
+
+        # ここに時間発展ロジックを追加予定
+        evolution_output = ft.Text("🕒 時間発展シミュレーション（仮表示）")
+
+        return ft.View(
+            route="/evolution",
+            controls=[
+                ft.Text("時間発展ページ", size=20, weight=ft.FontWeight.BOLD),
+                evolution_output,
+                ft.TextButton("◀ 戻る", on_click=lambda _: page.go("/"))
+            ]
+        )
 
 ft.app(target=main)

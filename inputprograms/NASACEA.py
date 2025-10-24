@@ -21,7 +21,7 @@ def CEA(Pc, OF,epsilon):
 
         f.write("      rocket sup,ae/at = ")
         f.write(str(epsilon))
-        #f.write(" nfz = 2")
+        f.write(" nfz = 2")
         f.write("\n")
 
         f.write("  p,bar=")
@@ -32,7 +32,7 @@ def CEA(Pc, OF,epsilon):
         f.write("react\n")
         f.write(" oxid=N2O wt=100  t,k=290\n")
         f.write(" fuel=PMMA wt=100  t,k=290\n")
-        f.write("    h,kj/mol=-468.3  C 5 O 2 H 8\n")
+        f.write("    h,kj/mol=-552.9  C 5 O 2 H 8\n")
 
         #ABSのデータ
         # f.write(" fuel=acrylonitrile wt=43  t,k=290\n")
@@ -85,7 +85,7 @@ def CEA(Pc, OF,epsilon):
     
     #0:chamber 1:throat 2:exit
     #rocket parametorsはchamberの値がないので、0:throat 1:exit 
-    gamma_new = float(gamma_num[2])#出口比熱比
+    gamma_new = float(gamma_num[0])#燃焼室比熱比
     Cstar_new = float(Cstar_num[1])#出口Cstar
     CF_new = float(CF_num[1] )#出口CF
     T_c_new = float(T_c_num[0]) #燃焼室温度

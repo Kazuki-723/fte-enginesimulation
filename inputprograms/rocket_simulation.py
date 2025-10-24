@@ -26,6 +26,7 @@ class RocketSimulation:
         self.Vol_ox = Vol_ox
         self.Df_init = Df_init
         self.Lf = Lf
+        self.Ve_th = 0
 
         # 積分計算用の配列初期化
         self.Pt_arr = np.array([])
@@ -39,7 +40,7 @@ class RocketSimulation:
         self.F_fte_arr = np.array([])
         self.M_ox_arr = np.array([])
 
-    def initial_convergence(self, F_req, Pc_def, OF_def, mdot_new, eta_cstar, eta_nozzle):
+    def initial_convergence(self, F_req, Pc_def, OF_def, mdot_new, Df_init, eta_cstar, eta_nozzle):
         log = []
 
         # 入力パラメータの設定
@@ -48,6 +49,7 @@ class RocketSimulation:
         self.OF_def = OF_def
         self.mdot_new = mdot_new
         self.mdot_old = mdot_new
+        self.Df_init = Df_init
         self.eta_cstar = eta_cstar
         self.eta_nozzle = eta_nozzle
         self.eta = eta_cstar * eta_nozzle
@@ -55,10 +57,17 @@ class RocketSimulation:
         #epsilon 調整
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
          self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-         self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, epsilon=1)
+         self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, epsilon=3)
         
-        self.epsilon_new = (2 / (self.gamma_tmp1 + 1)) ** (1 / (self.gamma_tmp1 - 1)) * ((self.Pc_def / self.Pa) ** (1 / self.gamma_tmp1)) / \
-        np.sqrt((self.gamma_tmp1 + 1) / (self.gamma_tmp1 - 1) * (1 -(self.Pa / self.Pc_def) ** ((self.gamma_tmp1 - 1) / self.gamma_tmp1 )) )
+        # epsilonの計算式, 怪しいので調べる
+        print(self.gamma_tmp1)
+        print(self.Pc_def)
+        print(self.Pa)
+        self.epsilon_new = \
+        ((self.gamma_tmp1 + 1) / 2) ** (1 / (self.gamma_tmp1 - 1)) * \
+        (self.Pa / self.Pc_def) ** (1 / self.gamma_tmp1) * \
+        np.sqrt((self.gamma_tmp1 + 1) / (self.gamma_tmp1 - 1) * (1 - (self.Pa/ self.Pc_def) ** ((self.gamma_tmp1 - 1) / self.gamma_tmp1)))
+        self.epsilon_new = 1/self.epsilon_new
         print("calcrated epsilon = ", self.epsilon_new, "[-]")
 
         # 初期CEA計算
@@ -86,19 +95,30 @@ class RocketSimulation:
              self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
              self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, self.epsilon_new)
 
+            # 出口速度計算
             self.R_tmp1 = self.R_univ / self.Mole_tmp1
             self.a_tmp1 = np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
             self.Ve_tmp1 = self.a_tmp1 * self.Mach_tmp1
+            # スロート断面積計算
+            self.At_new = 4 * self.eta_cstar * self.Cstar_tmp1 * self.mdot_new / (math.pi * self.Pc_def * 10 ** 6)
+            
+            # 出口マッハ数
+            self.Me_new = np.sqrt(2 * self.R_tmp1 * self.T_c_tmp1 * (self.gamma_tmp1/(self.gamma_tmp1-1)) * (1- (self.Pe_tmp1/self.Pc_def)**((self.gamma_tmp1-1)/self.gamma_tmp1))) / \
+            np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
 
-            self.At_new = (self.mdot_new * np.sqrt((self.R_tmp1 * self.T_t_tmp1) / self.gamma_tmp1)) / (self.Pthroat_tmp1 * 1e6)
-            self.Me_new = np.sqrt((2 * ((self.Pc_def / self.Pe_old) ** ((self.gamma_tmp1 - 1) / self.gamma_tmp1) - 1)) / (self.gamma_tmp1 - 1)) + 0.01
-            self.Ae_new = self.At_new * (((1 + (((self.gamma_tmp1 - 1) * self.Me_new ** 2) / 2)) / ((self.gamma_tmp1 + 1) / 2)) ** ((self.gamma_tmp1 + 1) / (2 * (self.gamma_tmp1 - 1)))) / self.Me_new
-            self.epsilon_new = self.Ae_new / self.At_new
+            # 開口比
+            self.epsilon_new = ((1 + ((self.gamma_tmp1 - 1)/2 * (self.Me_new**2)))/(1 + (self.gamma_tmp1 - 1)/2)) ** ((self.gamma_tmp1+1) / 2*(self.gamma_tmp1-1)) / self.Me_new
+            self.epsilon_new = 1/self.epsilon_new
+            print("calc.epsilon  = ", self.epsilon_new, "[-]")
 
+            # 出口面積
+            self.Ae_new = self.At_new * self.epsilon_new
+            #print("exit pres. = ",self.Pe_tmp1)
+
+            #推力計算
             self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_def
             self.F = self.CF_tmp1 * self.Cstar_tmp1 * self.eta * self.mdot_new
             self.diff_F = self.F_req - self.F
-            self.diff_exit = self.Pe_tmp1 - self.Pe_old
 
             self.Dt = 2 * np.sqrt(self.At_new / math.pi)
             self.De = 2 * np.sqrt(self.Ae_new / math.pi)
@@ -113,13 +133,17 @@ class RocketSimulation:
             self.iter_logger.append(self.j, self.F, self.mdot_new, self.Pe_tmp1, self.epsilon_new)
             self.j += 1
 
-            if abs(self.diff_exit) < 1e-6:
-                self.i += 1
-                if self.i > 3:
-                    log.append("⚠️ 収束失敗（出口圧力変化が停止）")
-                    break
+        # 初期状態の計算
+        self.mdot_ox_init = (self.OF_def / (self.OF_def + 1)) * self.mdot_new  # 初期酸化剤流量[kg/s]
+        self.mdot_f_init = (1 / (self.OF_def + 1)) * self.mdot_new  # 初期燃料流量[kg/s]
 
-        self.Kstar = (self.OF_def / (self.OF_def + 1)) * self.mdot_new / np.sqrt(2 * self.rho_ox_init * ((self.Ptank_init - self.Pc_init) * 1e6))
+        # Discharge coef. * orifice cross section
+        self.Kstar = self.mdot_ox_init / np.sqrt(2 * self.rho_ox_init * ((self.Ptank_init - self.Pc_init) * 1e6))
+
+        # O/F, 燃料形状
+        self.OF_tmp1 = self.mdot_ox_init / self.mdot_f_init
+        self.Ap_req = self.mdot_f_init / (self.rho_f_start * self.a_ox * ((4 * self.mdot_ox_init) / (math.pi * self.Df_init ** 2)) ** self.n_ox)  # 定義したOFを実現するのに必要な燃焼面積
+        self.Lf = self.Ap_req / (self.Df_init * math.pi)
 
         log.append("-------------")
         log.append(f"最終推力 = {self.F:.3f} [N]")
@@ -128,6 +152,11 @@ class RocketSimulation:
         log.append(f"最終epsilon = {self.epsilon_new:.4f}")
         log.append(f"Dt = {self.Dt:.4f} m, De = {self.De:.4f} m")
         log.append(f"K* = {self.Kstar:.6f}")
+        log.append(f"初期酸化剤流量 = {self.mdot_ox_init:.6f}")
+        log.append(f"初期燃料流量 = {self.mdot_f_init:.6f}")
+        log.append(f"初期燃料内径(入力値) = {self.Df_init:.6f}")
+        log.append(f"燃料長さ = {self.Lf:.6f}")
+
         log.append("-------------")
 
         print("-------------")
@@ -137,6 +166,10 @@ class RocketSimulation:
         print("epsilon_new = ", self.epsilon_new)
         print("Dt, De = ", self.Dt, self.De, "[m]")
         print("Kstar = ", self.Kstar)
+        print("mdot_ox = ", self.mdot_ox_init, "[kg/s]")
+        print("mdot_f = ", self.mdot_f_init, "[kg/s]")
+        print("Df(input value) = ", self.Df_init, "[kg/s]")
+        print("Lf = ", self.Lf, "[m]")
         print("END")
         print("-------------")
 

@@ -24,6 +24,7 @@ def main(page: ft.Page):
             "Pc_def": ft.TextField(label="初期燃焼室圧力 [MPa]", width=150),
             "OF_def": ft.TextField(label="初期O/F比", width=150),
             "mdot_new": ft.TextField(label="初期流量 [kg/s]", width=150),
+            "Df_init":ft.TextField(label="初期燃料内径 [m]", width=150),
             "eta_cstar": ft.TextField(label="C*効率", width=150),
             "eta_nozzle": ft.TextField(label="ノズル効率", width=150),
         }

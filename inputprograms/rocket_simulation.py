@@ -106,14 +106,16 @@ class RocketSimulation:
             self.Me_new = np.sqrt(2 * self.R_tmp1 * self.T_c_tmp1 * (self.gamma_tmp1/(self.gamma_tmp1-1)) * (1- (self.Pe_tmp1/self.Pc_def)**((self.gamma_tmp1-1)/self.gamma_tmp1))) / \
             np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
 
-            # 開口比
-            self.epsilon_new = ((1 + ((self.gamma_tmp1 - 1)/2 * (self.Me_new**2)))/(1 + (self.gamma_tmp1 - 1)/2)) ** ((self.gamma_tmp1+1) / 2*(self.gamma_tmp1-1)) / self.Me_new
-            self.epsilon_new = 1/self.epsilon_new
+            # 開口比、出口面積
+            # self.epsilon_new = ((1 + (self.gamma_tmp1 - 1) * (self.Me_new**2) / 2)/(1 + (self.gamma_tmp1 - 1)/2)) ** ((self.gamma_tmp1+1) / 2*(self.gamma_tmp1-1)) / self.Me_new
+            # self.epsilon_new = 1/self.epsilon_new
+            self.Ae_new = (self.Pthroat_tmp1/self.Pa) ** (1/self.gamma_tmp1) * (1/self.Me_new) * self.At_new
+            self.epsilon_new = self.Ae_new / self.At_new
             print("calc.epsilon  = ", self.epsilon_new, "[-]")
 
             # 出口面積
             self.Ae_new = self.At_new * self.epsilon_new
-            #print("exit pres. = ",self.Pe_tmp1)
+            print("exit pres. = ",self.Pe_tmp1)
 
             #推力計算
             self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_def

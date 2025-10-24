@@ -37,23 +37,23 @@ Df_init = 0.034  # 燃料内径[m](（入力, const）
 Lf = 0.4  # 燃料長さ[m]（とりあえず出力）
 
 # 性能値
-eta_cstar = 0.80
-eta_nozzle = (1 + math.cos(math.pi / 12)) / 2
-eta = eta_cstar * eta_nozzle
-F_req = F_req * eta
+# eta_cstar = 0.80
+# eta_nozzle = (1 + math.cos(math.pi / 12)) / 2
+# eta = eta_cstar * eta_nozzle
+# F_req = F_req * eta
 
-#------------------------#
-# CEAの仮パラメータの入力
-# Pc, OF, epsilon
-#------------------------#
+# #------------------------#
+# # CEAの仮パラメータの入力
+# # Pc, OF, epsilon
+# #------------------------#
 
-Pc_def = 2.0  # 初期燃焼室圧 [MPa](初期状態の収束計算においてconst. 設計変数)
+# Pc_def = 2.0  # 初期燃焼室圧 [MPa](初期状態の収束計算においてconst. 設計変数)
 
-OF_def = 6.5  # 仮OF [-]
-# 酸化剤流量に対してK*（discharge coef * crosssectional area orifice）が定まる
+# OF_def = 6.5  # 仮OF [-]
+# # 酸化剤流量に対してK*（discharge coef * crosssectional area orifice）が定まる
 
-epsilon_start = 10  # 仮開口比 [-]
-epsilon_new = epsilon_start
+# epsilon_start = 10  # 仮開口比 [-]
+# epsilon_new = epsilon_start
 
-# 質量流量
-mdot_new = 0.32
+# # 質量流量
+# mdot_new = 0.32

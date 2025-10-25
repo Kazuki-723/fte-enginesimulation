@@ -98,16 +98,48 @@ def main(page: ft.Page):
                 ft.TextButton("◀ 戻る", on_click=lambda _: page.go("/"))
             ])
 
-        # ここに時間発展ロジックを追加予定
+        # 物質と密度の辞書
+        materials = {
+            "液体酸素 (LOX)": 1141,
+            "液体水素 (LH2)": 71,
+            "RP-1 (ケロシン)": 810,
+            "メタン (CH4)": 422,
+            "N2O4 (四酸化二窒素)": 1440,
+            "UDMH (ジメチルヒドラジン)": 791
+        }
+
+        # 密度表示用テキスト
+        selected_density = ft.Text(value="密度: -", size=16)
+
+        # プルダウン選択イベント
+        def on_material_change(e):
+            name = e.control.value
+            rho = materials.get(name, "-")
+            selected_density.value = f"密度: {rho} kg/m³" if rho != "-" else "密度: -"
+            page.update()
+
+        # プルダウンコンポーネント
+        material_dropdown = ft.Dropdown(
+            label="推進剤を選択",
+            options=[ft.dropdown.Option(name) for name in materials.keys()],
+            on_change=on_material_change,
+            width=250,
+            value="液体酸素 (LOX)"
+        )
+
+        # 仮の時間発展出力
         evolution_output = ft.Text("🕒 時間発展シミュレーション（仮表示）")
 
         return ft.View(
             route="/evolution",
             controls=[
                 ft.Text("時間発展ページ", size=20, weight=ft.FontWeight.BOLD),
+                ft.Row(
+                    controls=[material_dropdown, selected_density],
+                    alignment=ft.MainAxisAlignment.START
+                ),
                 evolution_output,
                 ft.TextButton("◀ 戻る", on_click=lambda _: page.go("/"))
             ]
         )
-
 ft.app(target=main)

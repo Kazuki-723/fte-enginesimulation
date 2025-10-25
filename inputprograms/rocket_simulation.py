@@ -2,6 +2,7 @@ import numpy as np
 import math
 import csv
 import matplotlib.pyplot as plt
+import io, base64
 from inputprograms.rocket_constants import *
 from inputprograms.cea_interface import CEAInterface
 from inputprograms.iteration_logger import IterationLogger
@@ -39,6 +40,8 @@ class RocketSimulation:
         self.CF_arr = np.array([])
         self.F_fte_arr = np.array([])
         self.M_ox_arr = np.array([])
+        self.kstar_cd_list = np.array([])
+
 
     def initial_convergence(self, F_req, Pc_def, OF_def, mdot_new, Df_init, eta_cstar, eta_nozzle):
         log = []
@@ -175,12 +178,19 @@ class RocketSimulation:
         print("END")
         print("-------------")
 
-        return "\n".join(log)
+        # Kstarグラフ描画
+        self.cd_values = np.linspace(0.1, 0.9, 50)
+        for i in range(len(self.cd_values)):
+            #self.Kstar = self.cd_values[i] * math.pi/4 * self.kstar_cd_list[i] ** 2
+            self.kstar_cd_list = np.append(self.kstar_cd_list, np.sqrt(4*self.Kstar / (self.cd_values[i] * math.pi)))
 
-    def get_iteration_plot_base64(self):
-        return self.iter_logger.get_base64_plot()
+        print("END simulation")
+        return "\n".join(log), self.kstar_cd_list, self.cd_values
 
-#ここからは未改造
+    # resultのグラフ呼び出し関数
+    def get_iteration_plot_base64(self, Dovalue, cdvalue):
+        return self.iter_logger.get_base64_plot(Dovalue, cdvalue)
+
     def integration_simulation(self):
         #------------------------#
         # 積分計算の開始
@@ -223,6 +233,9 @@ class RocketSimulation:
         print("O/F = ", self.mdot_ox_init / self.mdot_f_init)
 
         print("---------------START INTEGRATION---------------")
+
+        #ここからは未改造
+
         #====================#
         # 積分計算
         #====================#

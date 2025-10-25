@@ -20,13 +20,13 @@ def main(page: ft.Page):
     # メインビュー（初期条件＋収束）
     def main_view():
         inputs = {
-            "F_req": ft.TextField(label="要求推力 [N]", width=150),
-            "Pc_def": ft.TextField(label="初期燃焼室圧力 [MPa]", width=150),
-            "OF_def": ft.TextField(label="初期O/F比", width=150),
-            "mdot_new": ft.TextField(label="初期流量 [kg/s]", width=150),
-            "Df_init":ft.TextField(label="初期燃料内径 [m]", width=150),
-            "eta_cstar": ft.TextField(label="C*効率", width=150),
-            "eta_nozzle": ft.TextField(label="ノズル効率", width=150),
+            "F_req": ft.TextField(label="要求推力 [N]", width=150, value=650),
+            "Pc_def": ft.TextField(label="初期燃焼室圧力 [MPa]", width=150, value=2),
+            "OF_def": ft.TextField(label="初期O/F比", width=150, value=6.5),
+            "mdot_new": ft.TextField(label="初期流量 [kg/s]", width=150, value=0.33),
+            "Df_init":ft.TextField(label="初期燃料内径 [m]", width=150, value=0.034),
+            "eta_cstar": ft.TextField(label="C*効率", width=150, value=0.8),
+            "eta_nozzle": ft.TextField(label="ノズル効率", width=150,value=0.98),
         }
 
         result_text = ft.Text()
@@ -41,10 +41,10 @@ def main(page: ft.Page):
                 return
 
             sim = RocketSimulation()
-            output = sim.initial_convergence(**values)
+            output, Dovalue, cdvalue = sim.initial_convergence(**values)
             result_text.value = output
 
-            graph_image.src_base64 = sim.get_iteration_plot_base64()
+            graph_image.src_base64 = sim.get_iteration_plot_base64(Dovalue, cdvalue)
             graph_image.visible = True
 
             page.session.set("initial_conditions", values)  # 初期条件保存
@@ -68,6 +68,9 @@ def main(page: ft.Page):
             height=page.window_height + 100,
             scroll=ft.ScrollMode.AUTO
         )
+
+        # 右側：収束グラフと K* グラフを縦に並べる
+        graph_image = ft.Image(visible=False, expand=True)
 
         graph_column = ft.Column(
             controls=[graph_image],

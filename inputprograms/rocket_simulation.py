@@ -156,7 +156,7 @@ class RocketSimulation:
         log.append(f"最終Pe = {self.Pe_tmp1:.4f} [MPa]")
         log.append(f"最終epsilon = {self.epsilon_new:.4f}")
         log.append(f"Dt = {self.Dt:.4f} m, De = {self.De:.4f} m")
-        log.append(f"K* = {self.Kstar:.6f}")
+        log.append(f"K* = {self.Kstar}")
         log.append(f"初期酸化剤流量 = {self.mdot_ox_init:.6f}")
         log.append(f"初期燃料流量 = {self.mdot_f_init:.6f}")
         log.append(f"初期燃料内径(入力値) = {self.Df_init:.6f}")
@@ -235,6 +235,19 @@ class RocketSimulation:
         print("---------------START INTEGRATION---------------")
 
         #ここからは未改造
+        # input整理
+        """
+        Pt_init:未定義(時間発展にbox)
+        Pt_end:未定義(時間発展にbox)
+        Pc_init:初期計算定義
+        Df_init:初期計算定義
+        Lf:初期計算定義(出力)
+        K*:初期計算定義(出力)
+        epsilon:初期計算定義(出力)
+        a,n,rho_fr,ho_ox:組み合わせ依存(時間発展側選択)
+        V_tank:未定義：(時間発展にbox)
+        """
+
 
         #====================#
         # 積分計算
@@ -252,7 +265,7 @@ class RocketSimulation:
 
         # 計算ごとに再定義が必要な値
         # 作動開始からの経過時間
-        self.t = 9000  # 収束前の作動時間を勘で入力[ms]：[s]だと変な値が出た。たぶん小数点以下の桁数の問題
+        # self.t = 9000  # 収束前の作動時間を勘で入力[ms]：[s]だと変な値が出た。たぶん小数点以下の桁数の問題
         self.k = 0
 
         # memo : NASA-CEAの入力はPc, O/F, epsilon

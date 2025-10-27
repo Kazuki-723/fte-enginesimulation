@@ -1,5 +1,8 @@
 import flet as ft
 from inputprograms.rocket_simulation import RocketSimulation
+from inputprograms.interp_density import OxidizerDatabase
+import re
+
 
 def main(page: ft.Page):
     page.title = "Rocket Simulation GUI"
@@ -48,6 +51,7 @@ def main(page: ft.Page):
             graph_image.visible = True
 
             page.session.set("initial_conditions", values)  # 初期条件保存
+            page.session.set("initial_results", output)  # 出力保存
             page.update()
         
         # 実行ボタンと遷移ボタンを並べる
@@ -88,46 +92,105 @@ def main(page: ft.Page):
                 )
             ]
         )
+    # ちょっとパース
+    def parse_initial_results(text: str) -> dict:
+        result = {}
+
+        # K*
+        match_k = re.search(r"K\* *= *([\d\.Ee+-]+)", text)
+        if match_k:
+            result["Kstar"] = float(match_k.group(1))
+
+        # epsilon
+        match_eps = re.search(r"最終epsilon *= *([\d\.Ee+-]+)", text)
+        if match_eps:
+            result["epsilon"] = float(match_eps.group(1))
+
+        # Lf（燃料長さ）
+        match_lf = re.search(r"燃料長さ *= *([\d\.Ee+-]+)", text)
+        if match_lf:
+            result["Lf"] = float(match_lf.group(1))
+
+        return result
+
 
     # 時間発展ビュー（別ページ）
     def evolution_view():
         initial = page.session.get("initial_conditions")
-        if not initial:
-            return ft.View(route="/evolution", controls=[
-                ft.Text("⚠️ 初期条件が未設定です"),
-                ft.TextButton("◀ 戻る", on_click=lambda _: page.go("/"))
-            ])
+        results = page.session.get("initial_results")  # K*, epsilon, Lf を含む
+        if results != None:
+            results_parsed = parse_initial_results(results)
 
-        # 物質と密度の辞書
+        print(results)
+        # 初期値がある場合は値を埋める、なければ空欄
+        Pc_def = str(initial["Pc_def"]) if initial else ""
+        Df_init = str(initial["Df_init"]) if initial else ""
+        eta_cstar = str(initial["eta_cstar"]) if initial else ""
+        eta_nozzle = str(initial["eta_nozzle"]) if initial else ""
+
+        Kstar = str(results_parsed["Kstar"]) if initial else ""
+        epsilon = str(results_parsed["epsilon"]) if initial else ""
+        Lf = str(results_parsed["Lf"]) if initial else ""
+
+        # 入力欄の定義
+        Pc_box = ft.TextField(label="燃焼室圧力 Pc [MPa]", value=Pc_def, width=150)
+        Df_box = ft.TextField(label="初期ポート径 Df [m]", value=Df_init, width=150)
+        eta_cstar_box = ft.TextField(label="C*効率", value=eta_cstar, width=150)
+        eta_nozzle_box = ft.TextField(label="ノズル効率", value=eta_nozzle, width=150)
+
+        Kstar_box = ft.TextField(label="K*", value=Kstar, width=150)
+        epsilon_box = ft.TextField(label="膨張比 ε", value=epsilon, width=150)
+        Lf_box = ft.TextField(label="燃焼長 Lf [m]", value=Lf, width=150)
+
+        # 登録物質と物性値（a, n は仮値）
         materials = {
-            "液体酸素 (LOX)": 1141,
-            "液体水素 (LH2)": 71,
-            "RP-1 (ケロシン)": 810,
-            "メタン (CH4)": 422,
-            "N2O4 (四酸化二窒素)": 1440,
-            "UDMH (ジメチルヒドラジン)": 791
+            "PMMA": {"密度": 1180, "a": 0.85, "n": 1.2},
+            "ABS":  {"密度": 1040, "a": 0.90, "n": 1.1}
         }
 
-        # 密度表示用テキスト
-        selected_density = ft.Text(value="密度: -", size=16)
+        # 表示用テキスト群
+        density_text = ft.Text(value="密度: -", size=16)
+        a_text = ft.Text(value="a: -", size=16)
+        n_text = ft.Text(value="n: -", size=16)
 
-        # プルダウン選択イベント
         def on_material_change(e):
             name = e.control.value
-            rho = materials.get(name, "-")
-            selected_density.value = f"密度: {rho} kg/m³" if rho != "-" else "密度: -"
+            props = materials.get(name, {})
+            density_text.value = f"密度: {props.get('密度', '-')} kg/m³"
+            a_text.value = f"a: {props.get('a', '-')}"
+            n_text.value = f"n: {props.get('n', '-')}"
+            page.session.set("material_properties", props)  # RocketSimulation側に渡す準備
             page.update()
 
-        # プルダウンコンポーネント
         material_dropdown = ft.Dropdown(
-            label="推進剤を選択",
+            label="固体燃料を選択",
             options=[ft.dropdown.Option(name) for name in materials.keys()],
             on_change=on_material_change,
-            width=250,
-            value="液体酸素 (LOX)"
+            width=250
         )
 
-        # 仮の時間発展出力
+        property_column = ft.Column(
+            controls=[density_text, a_text, n_text],
+            spacing=5
+        )
+
+        # 酸化剤補完データベース
+        ox_db = OxidizerDatabase()
+
+        pressure_input = ft.TextField(label="酸化剤圧力 [MPa]", width=150)
+        density_output = ft.Text(value="酸化剤密度: -", size=16)
+
+        def on_pressure_change(e):
+            try:
+                p = float(pressure_input.value)
+                result = ox_db.get_density(p)
+                density_output.value = result
+            except ValueError:
+                density_output.value = "⚠️ 数値で入力してください"
+            page.update()
+
+        pressure_input.on_change = on_pressure_change
+
         evolution_output = ft.Text("🕒 時間発展シミュレーション（仮表示）")
 
         return ft.View(
@@ -135,11 +198,23 @@ def main(page: ft.Page):
             controls=[
                 ft.Text("時間発展ページ", size=20, weight=ft.FontWeight.BOLD),
                 ft.Row(
-                    controls=[material_dropdown, selected_density],
+                    controls=[
+                        ft.Column([
+                            ft.Text("初期状態パラメータ："),
+                            Pc_box, Df_box, eta_cstar_box, eta_nozzle_box,
+                            Kstar_box, epsilon_box, Lf_box,
+                            material_dropdown,
+                            property_column,
+                            pressure_input,
+                            density_output
+                        ],)
+                    ],
                     alignment=ft.MainAxisAlignment.START
                 ),
                 evolution_output,
                 ft.TextButton("◀ 戻る", on_click=lambda _: page.go("/"))
             ]
         )
+
+
 ft.app(target=main)

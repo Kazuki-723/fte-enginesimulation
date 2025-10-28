@@ -68,3 +68,31 @@ class IterationLogger:
         buf.close()
         plt.close(fig)
         return encoded
+    
+    def plot_time_series(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr):
+        fig, axs = plt.subplots(2, 2, figsize=(10, 8))
+
+        # 1段目
+        axs[0, 0].plot(time_ms, F_arr, marker='o', label = "F_CF")
+        axs[0, 0].plot(time_ms, F_fte_arr, marker='x', label = "F_mdot")
+        axs[0, 0].set_xlabel("Time [ms]")
+        axs[0, 0].set_ylabel("Thrust [N]")
+
+        axs[0, 1].plot(time_ms, OF_arr, marker='o')
+        axs[0, 1].set_xlabel("Time [ms]")
+        axs[0, 1].set_ylabel("O/F [-]")
+
+        # 2段目
+        axs[1, 0].plot(time_ms, Cstar_arr, marker='o')
+        axs[1, 0].set_xlabel("Time [ms]")
+        axs[1, 0].set_ylabel("Charactaristic velosity [m/s]")
+
+        axs[1, 1].axis("off")
+        plt.tight_layout()
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png")
+        buf.seek(0)
+        encoded = base64.b64encode(buf.read()).decode("utf-8")
+        buf.close()
+        plt.close(fig)
+        return encoded

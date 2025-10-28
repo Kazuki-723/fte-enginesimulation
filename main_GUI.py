@@ -130,6 +130,8 @@ def main(page: ft.Page):
         if results != None:
             results_parsed = parse_initial_results(results)
 
+        results_graph_image = ft.Image(visible=False, width=600)
+
         # 初期値がある場合は値を埋める、なければ空欄
         Pc_def = str(initial["Pc_def"]) if initial else ""
         Df_init = str(initial["Df_init"]) if initial else ""
@@ -241,7 +243,7 @@ def main(page: ft.Page):
                 n = float(material_props["n"])
 
                 # RocketSimulation呼び出し
-                result = sim.integration_simulation(
+                time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr = sim.integration_simulation(
                     Pc=Pc,
                     Df=Df,
                     OF=OF,
@@ -263,10 +265,12 @@ def main(page: ft.Page):
                 )
 
                 # 結果表示（仮）
-                evolution_output.value = f"✅ 計算完了\n{result}"
+                evolution_output.value = f"✅ 計算完了"
             except Exception as ex:
                 evolution_output.value = f"⚠️ 計算エラー: {ex}"
                 print(ex)
+            results_graph_image.src_base64 = sim.get_evolution_plot_base64(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr)
+            results_graph_image.visible = True
             page.update()
 
         run_button = ft.ElevatedButton(text="時間発展計算 ▶", on_click=on_run_simulation)
@@ -308,20 +312,27 @@ def main(page: ft.Page):
                             density_output,
                             material_dropdown,
                             property_column
+                        ], spacing=10),
+
+                        # ✅ 4列目：グラフ表示
+                        ft.Column([
+                            ft.Text("時間発展グラフ："),
+                            results_graph_image
                         ], spacing=10)
                     ],
-                    alignment=ft.MainAxisAlignment.START
+                    alignment=ft.MainAxisAlignment.START,
+                    vertical_alignment=ft.CrossAxisAlignment.START
                 ),
                 ft.Row(
                     controls=[
                         run_button,
                         evolution_output
                     ],
-                    alignment=ft.MainAxisAlignment.START
+                    alignment=ft.MainAxisAlignment.START,
+                    vertical_alignment=ft.CrossAxisAlignment.START
                 ),
                 ft.TextButton("◀ 戻る", on_click=lambda _: page.go("/"))
             ]
         )
-
 
 ft.app(target=main)

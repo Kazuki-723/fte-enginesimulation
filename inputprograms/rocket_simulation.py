@@ -183,7 +183,6 @@ class RocketSimulation:
         # Kstarグラフ描画
         self.cd_values = np.linspace(0.1, 0.9, 50)
         for i in range(len(self.cd_values)):
-            #self.Kstar = self.cd_values[i] * math.pi/4 * self.kstar_cd_list[i] ** 2
             self.kstar_cd_list = np.append(self.kstar_cd_list, np.sqrt(4*self.Kstar / (self.cd_values[i] * math.pi)))
 
         print("END simulation")
@@ -224,19 +223,16 @@ class RocketSimulation:
         self.mdot_f_init = (1 / (self.OF_tmp1 + 1)) * self.mdot_start  # 初期燃料流量[kg/s]
         self.delta_t = 0.001  # 微小時間[s]
         self.k = 0
+        self.iter_logger = IterationLogger()
 
         self.Ap_req  = self.Lf * self.Df * math.pi
         self.Ap = self.Ap_req
-        # 多分未定義のやつら、Dt, Ae_new, F
-        # f, Dtを持ってきてAeは計算する
         print("---------------START INTEGRATION---------------")
         #====================#
         # 積分計算
         #====================#
-
-        # 積分計算のための定数定義（上の出力に非依存）
-        self.Mass_ox = self.Vol_ox * self.rho_ox_init * 1000  # 酸化剤質量[m^3] * [kg/m^3] convert to  [g] 
-        self.Mass_ox_remain = self.Mass_ox  # 酸化剤残量
+        self.Mass_ox = self.Vol_ox * self.rho_ox_init * 1000  
+        self.Mass_ox_remain = self.Mass_ox  
 
         # 初期状態CEAを回しなおす
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1, 
@@ -260,7 +256,6 @@ class RocketSimulation:
 
         print("epsilon_new = ", self.epsilon_new)
 
-        # while(diff_t > 0.1): # 作動時間の収束
         while self.Mass_ox_remain >= 1:  # 酸化剤残量が0になるまで計算を続ける
             self.delta_p = (self.Ptank_tmp1 - self.Pc_tmp1) * 1000000
             self.mdot_ox = (self.Kstar * np.sqrt(2 * self.rho_ox_init * self.delta_p))  # 微小時間における流量[g/ms]
@@ -283,7 +278,7 @@ class RocketSimulation:
              self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1, 
              self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
 
-            self.R_tmp1 = self.R_univ / self.Mole_tmp1  # ガス定数
+            self.R_tmp1 = self.R_univ / self.Mole_tmp1  # 気体定数
             self.a_tmp1 = np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)  # 音速
 
             # 推力の計算
@@ -299,16 +294,7 @@ class RocketSimulation:
 
             # Ptの計算
             self.Ptank_tmp1 = self.Ptank_fin + (self.Ptank_init - self.Ptank_fin) * (self.Mass_ox_remain / self.Mass_ox)
-            #self.Pc_tmp1 = self.Pc_fin + (self.Pc_init - self.Pc_fin) * (self.Mass_ox_remain / self.Mass_ox)
-
-            #self.Pt = ((self.mdot_ox + self.mdot_f) * np.sqrt((self.R_tmp1 * self.T_t_tmp1) / self.gamma_tmp1)) / self.At_new /1000000
             self.Pc_tmp1 = 4 * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) /(math.pi * self.Dt ** 2 ) / 1000000
-            #self.Pc_tmp1 = self.Pa_tmp1 * ((1 + (((self.gamma_tmp1 - 1)/2) * self.Mach_tmp1 ** 2)) ** (self.gamma_tmp1 / (self.gamma_tmp1 - 1)))
-            #self.Pc_tmp1 = self.Pt * (1 + (((self.gamma_tmp1 - 1)) / 2)) ** (self.gamma_tmp1 / (self.gamma_tmp1 - 1)) / 1000000
-
-            # 外気圧力計算
-            #self.Pa_tmp1 = self.Pa_tmp1 - ((self.Pa_max - self.Pa_min) / self.t)
-
             self.k = self.k + 1
 
             print("Pc_tmp1 = ", self.Pc_tmp1)
@@ -318,7 +304,6 @@ class RocketSimulation:
             print("Remain ox = ", self.Mass_ox_remain)
             print("Lf = ", self.Lf)
             print("k = ", self.k)
-            # print(Ap)
             print("---------------")
 
             self.Pt_arr = np.append(self.Pt_arr, self.Ptank_tmp1)
@@ -346,6 +331,11 @@ class RocketSimulation:
         print("Df_init = ", Df * 1000, "[mm]")
         print("Df_final = ", self.Df * 1000, "[mm]")
         print("F_ave =", self.It * 1000 / self.k, "[N]")
+        time_ms = list(range(len(self.F_arr)))
+        return time_ms, self.F_arr, self.F_fte_arr, self.OF_arr, self.Cstar_arr
+    
+    def get_evolution_plot_base64(self, time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr):
+        return IterationLogger.plot_time_series(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr)
 
     def plot_and_save_results(self):
         # ---------------- #

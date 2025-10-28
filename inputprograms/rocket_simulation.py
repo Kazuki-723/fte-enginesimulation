@@ -2,12 +2,13 @@ import numpy as np
 import math
 import csv
 import matplotlib.pyplot as plt
-import io, base64
 from inputprograms.rocket_constants import *
 from inputprograms.cea_interface import CEAInterface
 from inputprograms.iteration_logger import IterationLogger
 
-
+# 定数定義
+R_univ = 8314 # 一般気体定数 [J/mol-K]
+Pa = 0.1013 # 大気圧 [MPa]
 
 class RocketSimulation:
     def __init__(self):
@@ -155,7 +156,8 @@ class RocketSimulation:
         log.append(f"最終mdot = {self.mdot_new:.6f} [kg/s]")
         log.append(f"最終Pe = {self.Pe_tmp1:.4f} [MPa]")
         log.append(f"最終epsilon = {self.epsilon_new:.4f}")
-        log.append(f"Dt = {self.Dt:.4f} m, De = {self.De:.4f} m")
+        log.append(f"Dt = {self.Dt:.4f} m")
+        log.append(f"De = {self.De:.4f} m")
         log.append(f"K* = {self.Kstar}")
         log.append(f"初期酸化剤流量 = {self.mdot_ox_init:.6f}")
         log.append(f"初期燃料流量 = {self.mdot_f_init:.6f}")
@@ -191,99 +193,62 @@ class RocketSimulation:
     def get_iteration_plot_base64(self, Dovalue, cdvalue):
         return self.iter_logger.get_base64_plot(Dovalue, cdvalue)
 
-    def integration_simulation(self):
-        #------------------------#
-        # 積分計算の開始
-        #------------------------#
-        """
-        # ---定数定義---#
-        # タンク内圧の定義
-        Pt_init = 3.5 # 初期タンク内圧[MPa]
-        Pt_fin = 2.5 # 作動終了時タンク内圧[MPa]
-        Pc_init = Pc_def
-        Pc_fin = 1.3
+    def integration_simulation(self, Pc, Df, OF, eta_cstar, eta_nozzle, Kstar, epsilon,
+                    Lf, mdot, V_tank, P_init, P_final, rho_ox, rho_fuel, a, n, F, Dt):
+        # 入力の設定
+        self.Pc_tmp1 = Pc
+        self.Df = Df
+        self.OF_tmp1 = OF
+        self.eta_cstar = eta_cstar
+        self.eta_nozzle = eta_nozzle
+        self.eta = self.eta_cstar * eta_nozzle
+        self.Kstar = Kstar
+        self.epsilon_new = epsilon
+        self.Lf = Lf
+        self.mdot_start = mdot
+        self.Vol_ox = V_tank
+        self.Ptank_tmp1 = P_init
+        self.Ptank_init = P_init
+        self.Ptank_fin = P_final
+        self.rho_ox_init = rho_ox
+        self.rho_f_start = rho_fuel
+        self.a_ox = a
+        self.n_ox = n
+        self.It = 0
+        self.F = F
+        self.Dt = Dt
+        self.Ae_new = math.pi / 4 * self.Dt ** 2 * self.epsilon_new
 
-        # 燃料の性質
-        rho_ox_start = 883 # 酸化剤密度[kg/m^3]
-        rho_f_start = 1190 # 燃料密度[kg/m^3]（const.）
-        a_ox = 0.000131 #酸化剤流束係数
-        n_ox = 0.34 #酸化剤流束指数
+        self.Pa_tmp1 = Pa
+        self.mdot_ox_init = (self.OF_tmp1 / (self.OF_tmp1 + 1)) * self.mdot_start  # 初期酸化剤流量[kg/s]
+        self.mdot_f_init = (1 / (self.OF_tmp1 + 1)) * self.mdot_start  # 初期燃料流量[kg/s]
+        self.delta_t = 0.001  # 微小時間[s]
+        self.k = 0
 
-
-        # グレイン形状
-        Df_init = 0.034 #燃料内径[m](（とりあえず出力）
-        Lf = 0.39 #燃料長さ[m]（とりあえず出力）
-        """
-        self.mdot_start = self.mdot_new
-        self.mdot_ox_init = (self.OF_def / (self.OF_def + 1)) * self.mdot_start  # 初期酸化剤流量[kg/s]
-        self.mdot_f_init = (1 / (self.OF_def + 1)) * self.mdot_start  # 初期燃料流量[kg/s]
-
-        self.Kstar = 0  # 手打ち用
-        self.Kstar = self.mdot_ox_init / np.sqrt(2 * self.rho_ox_init * ((self.Ptank_init - self.Pc_init) * 1000000))
-        print("mdot_ox", self.mdot_ox_init)
-        print("Kstar = ", self.Kstar)
-
-        # 燃焼面積の計算
-        self.Ap_req = self.mdot_f_init / (self.rho_f_start * self.a_ox * ((4 * self.mdot_ox_init) / (math.pi * self.Df_init ** 2)) ** self.n_ox)  # 定義したOFを実現するのに必要な燃焼面積
-
-        self.Lf = self.Ap_req / (self.Df_init * math.pi)
-        print("Lf = ", self.Lf)
-        print("Ap = ", self.Ap_req)
-        print("mdot_f = ", self.mdot_f_init)
-        print("O/F = ", self.mdot_ox_init / self.mdot_f_init)
-
+        self.Ap_req  = self.Lf * self.Df * math.pi
+        self.Ap = self.Ap_req
+        # 多分未定義のやつら、Dt, Ae_new, F
+        # f, Dtを持ってきてAeは計算する
         print("---------------START INTEGRATION---------------")
-
-        #ここからは未改造
-        # input整理
-        """
-        Pt_init:未定義(時間発展にbox)
-        Pt_end:未定義(時間発展にbox)
-        Pc_init:初期計算定義
-        Df_init:初期計算定義
-        Lf:初期計算定義(出力)
-        K*:初期計算定義(出力)
-        epsilon:初期計算定義(出力)
-        a,n,rho_fr,ho_ox:組み合わせ依存(時間発展側選択)
-        V_tank:未定義：(時間発展にbox)
-        """
-
-
         #====================#
         # 積分計算
         #====================#
 
         # 積分計算のための定数定義（上の出力に非依存）
-        self.Mass_ox = self.Vol_ox * self.rho_ox_init  # 酸化剤質量[L] * [kg/m^3] ... [g] 2000cc
+        self.Mass_ox = self.Vol_ox * self.rho_ox_init * 1000  # 酸化剤質量[m^3] * [kg/m^3] convert to  [g] 
         self.Mass_ox_remain = self.Mass_ox  # 酸化剤残量
-        print("Mass_ox = ", self.Mass_ox)
-        self.delta_t = 0.001  # 微小時間[s]
 
-        self.Ptank_tmp1 = self.Ptank_init
-        self.Pc_tmp1 = self.Pc_def
-        self.Df = self.Df_init
+        # 初期状態CEAを回しなおす
+        (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1, 
+             self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1, 
+             self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
 
-        # 計算ごとに再定義が必要な値
-        # 作動開始からの経過時間
-        # self.t = 9000  # 収束前の作動時間を勘で入力[ms]：[s]だと変な値が出た。たぶん小数点以下の桁数の問題
-        self.k = 0
-
-        # memo : NASA-CEAの入力はPc, O/F, epsilon
-        # 初回入力は
-        # Pt_tmp1 = Pt_init
-        # Pc_tmp1 = Pc_init
-        # O/F = OF_def
-        # epsilon = const.
-        print("Ap_req = ", self.Ap_req)
-        print(self.Ptank_tmp1)
-        print(self.Pc_tmp1)
-        print("------------")
-
-        self.OX = self.Mass_ox * 1000
+        # log配列
+        self.OX = self.Mass_ox
         self.Pt_arr = np.array([self.Ptank_tmp1])
         self.Pc_int_arr = np.array([self.Pc_tmp1])
         self.F_arr = np.array([self.F])
-        self.OF_arr = np.array([self.OF_def])
+        self.OF_arr = np.array([self.OF_tmp1])
         self.Ap_arr = np.array([self.Ap_req])
         self.mdot_arr = np.array([self.mdot_ox_init + self.mdot_f_init])
         self.Cstar_arr = np.array([self.Cstar_tmp1])
@@ -293,10 +258,6 @@ class RocketSimulation:
         self.mdot_ox_arr = np.array([self.mdot_ox_init])
         self.gamma_arr = np.array([self.gamma_tmp1])
 
-        self.Ap = self.Ap_req
-        self.It = 0
-
-        self.Pa_tmp1 = self.Pa_max  # 暫定[Pa]
         print("epsilon_new = ", self.epsilon_new)
 
         # while(diff_t > 0.1): # 作動時間の収束
@@ -375,6 +336,16 @@ class RocketSimulation:
             self.gamma_arr = np.append(self.gamma_arr, self.gamma_tmp1)
 
             self.It = self.It + self.F_new * 0.001
+        
+        # print result
+        print("----------RESULT----------")
+        print("Kstar = ", self.Kstar)
+        print("O/F_init = ", OF, "[-]")
+        print("It = ", self.It, "[Ns]")
+        print("Lf = ", Lf * 1000, "[mm]")
+        print("Df_init = ", Df * 1000, "[mm]")
+        print("Df_final = ", self.Df * 1000, "[mm]")
+        print("F_ave =", self.It * 1000 / self.k, "[N]")
 
     def plot_and_save_results(self):
         # ---------------- #
@@ -410,8 +381,3 @@ class RocketSimulation:
         with open(filename, 'w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file, quoting=csv.QUOTE_NONE)
             writer.writerows(F_values)
-
-    def run_simulation(self):
-        self.initial_convergence()
-        self.integration_simulation()
-        self.plot_and_save_results()

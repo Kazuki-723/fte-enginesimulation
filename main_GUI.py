@@ -95,21 +95,30 @@ def main(page: ft.Page):
     # ちょっとパース
     def parse_initial_results(text: str) -> dict:
         result = {}
-
         # K*
         match_k = re.search(r"K\* *= *([\d\.Ee+-]+)", text)
         if match_k:
             result["Kstar"] = float(match_k.group(1))
-
         # epsilon
         match_eps = re.search(r"最終epsilon *= *([\d\.Ee+-]+)", text)
         if match_eps:
             result["epsilon"] = float(match_eps.group(1))
-
         # Lf（燃料長さ）
         match_lf = re.search(r"燃料長さ *= *([\d\.Ee+-]+)", text)
         if match_lf:
             result["Lf"] = float(match_lf.group(1))
+        # mdot
+        match_mdot = re.search(r"最終mdot *= *([\d\.Ee+-]+)", text)
+        if match_mdot:
+            result["mdot"] = float(match_mdot.group(1))
+        # 初期推力F
+        match_F = re.search(r"最終推力 *= *([\d\.Ee+-]+)", text)
+        if match_F:
+            result["F"] = float(match_F.group(1))
+        # Dt
+        match_Dt = re.search(r"Dt *= *([\d\.Ee+-]+)", text)
+        if match_Dt:
+            result["Dt"] = float(match_Dt.group(1))
 
         return result
 
@@ -121,30 +130,37 @@ def main(page: ft.Page):
         if results != None:
             results_parsed = parse_initial_results(results)
 
-        print(results)
         # 初期値がある場合は値を埋める、なければ空欄
         Pc_def = str(initial["Pc_def"]) if initial else ""
         Df_init = str(initial["Df_init"]) if initial else ""
         eta_cstar = str(initial["eta_cstar"]) if initial else ""
         eta_nozzle = str(initial["eta_nozzle"]) if initial else ""
+        OF_def = str(initial["OF_def"]) if initial else ""
 
-        Kstar = str(results_parsed["Kstar"]) if initial else ""
-        epsilon = str(results_parsed["epsilon"]) if initial else ""
-        Lf = str(results_parsed["Lf"]) if initial else ""
+        Kstar = str(results_parsed["Kstar"]) if results_parsed else ""
+        epsilon = str(results_parsed["epsilon"]) if results_parsed else ""
+        Lf = str(results_parsed["Lf"]) if results_parsed else ""
+        mdot = str(results_parsed["mdot"]) if results_parsed else ""
+        F = str(results_parsed["F"]) if results_parsed else ""
+        Dt = str(results_parsed["Dt"]) if results_parsed else ""
 
         # 入力欄の定義
         Pc_box = ft.TextField(label="燃焼室圧力 Pc [MPa]", value=Pc_def, width=150)
         Df_box = ft.TextField(label="初期ポート径 Df [m]", value=Df_init, width=150)
+        OF_box = ft.TextField(label="初期OF比", value=OF_def, width=150)
         eta_cstar_box = ft.TextField(label="C*効率", value=eta_cstar, width=150)
         eta_nozzle_box = ft.TextField(label="ノズル効率", value=eta_nozzle, width=150)
 
         Kstar_box = ft.TextField(label="K*", value=Kstar, width=150)
         epsilon_box = ft.TextField(label="膨張比 ε", value=epsilon, width=150)
         Lf_box = ft.TextField(label="燃焼長 Lf [m]", value=Lf, width=150)
+        mdot_box = ft.TextField(label="推進剤流量 mdot [kg/s]", value=mdot, width=150)
+        F_box = ft.TextField(label="初期推力F [N]", value=F, width=150)
+        Dt_box = ft.TextField(label="スロート径 [m]", value=Dt, width=150)
 
         # 登録物質と物性値（a, n は仮値）
         materials = {
-            "PMMA": {"密度": 1180, "a": 0.85, "n": 1.2},
+            "PMMA": {"密度": 1180, "a": 0.000131, "n": 0.34},
             "ABS":  {"密度": 1040, "a": 0.90, "n": 1.1}
         }
 
@@ -191,6 +207,69 @@ def main(page: ft.Page):
 
         pressure_input.on_change = on_pressure_change
 
+            # タンク容積と最終酸化剤圧力の入力欄
+        tank_volume_input = ft.TextField(label="タンク容積 [m³]", width=150)
+        final_pressure_input = ft.TextField(label="最終酸化剤圧力 [MPa]", width=150)
+
+        # 関数に放り込む部分
+        sim = RocketSimulation()
+        def on_run_simulation(e):
+            try:
+                # 各入力欄から値を取得
+                Pc = float(Pc_box.value)
+                Df = float(Df_box.value)
+                OF = float(OF_box.value)
+                eta_cstar = float(eta_cstar_box.value)
+                eta_nozzle = float(eta_nozzle_box.value)
+                Kstar = float(Kstar_box.value)
+                epsilon = float(epsilon_box.value)
+                Lf = float(Lf_box.value)
+                mdot = float(mdot_box.value)
+                V_tank = float(tank_volume_input.value)
+                P_init = float(pressure_input.value)
+                P_final = float(final_pressure_input.value)
+                F_init = float(F_box.value)
+                Dt = float(Dt_box.value)
+
+                # 酸化剤密度（補完済みテキストから抽出）
+                rho_ox = float(density_output.value.split(":")[-1].replace("kg/m³", "").strip())
+
+                # 燃料密度・定数a,n（Dropdown選択から取得）
+                material_props = page.session.get("material_properties")
+                rho_fuel = float(material_props["密度"])
+                a = float(material_props["a"])
+                n = float(material_props["n"])
+
+                # RocketSimulation呼び出し
+                result = sim.integration_simulation(
+                    Pc=Pc,
+                    Df=Df,
+                    OF=OF,
+                    eta_cstar=eta_cstar,
+                    eta_nozzle=eta_nozzle,
+                    Kstar=Kstar,
+                    epsilon=epsilon,
+                    Lf=Lf,
+                    mdot=mdot,
+                    V_tank=V_tank,
+                    P_init=P_init,
+                    P_final=P_final,
+                    rho_ox=rho_ox,
+                    rho_fuel=rho_fuel,
+                    a=a,
+                    n=n,
+                    F = F_init,
+                    Dt = Dt
+                )
+
+                # 結果表示（仮）
+                evolution_output.value = f"✅ 計算完了\n{result}"
+            except Exception as ex:
+                evolution_output.value = f"⚠️ 計算エラー: {ex}"
+                print(ex)
+            page.update()
+
+        run_button = ft.ElevatedButton(text="時間発展計算 ▶", on_click=on_run_simulation)
         evolution_output = ft.Text("🕒 時間発展シミュレーション（仮表示）")
 
         return ft.View(
@@ -199,19 +278,47 @@ def main(page: ft.Page):
                 ft.Text("時間発展ページ", size=20, weight=ft.FontWeight.BOLD),
                 ft.Row(
                     controls=[
+                        # 1列目
                         ft.Column([
-                            ft.Text("初期状態パラメータ："),
-                            Pc_box, Df_box, eta_cstar_box, eta_nozzle_box,
-                            Kstar_box, epsilon_box, Lf_box,
-                            material_dropdown,
-                            property_column,
+                            ft.Text("初期状態パラメータ①："),
+                            Pc_box,
+                            Df_box,
+                            OF_box,
+                            eta_cstar_box,
+                            eta_nozzle_box
+                        ], spacing=10),
+
+                        # 2列目
+                        ft.Column([
+                            ft.Text("初期状態パラメータ②："),
+                            Kstar_box,
+                            epsilon_box,
+                            Lf_box,
+                            mdot_box,
+                            F_box
+                        ], spacing=10),
+
+                        # 3列目
+                        ft.Column([
+                            ft.Text("初期状態パラメータ③："),
+                            Dt_box,
+                            tank_volume_input,
+                            final_pressure_input,
                             pressure_input,
-                            density_output
-                        ],)
+                            density_output,
+                            material_dropdown,
+                            property_column
+                        ], spacing=10)
                     ],
                     alignment=ft.MainAxisAlignment.START
                 ),
-                evolution_output,
+                ft.Row(
+                    controls=[
+                        run_button,
+                        evolution_output
+                    ],
+                    alignment=ft.MainAxisAlignment.START
+                ),
                 ft.TextButton("◀ 戻る", on_click=lambda _: page.go("/"))
             ]
         )

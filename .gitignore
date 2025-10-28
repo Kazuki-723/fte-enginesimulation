@@ -178,6 +178,7 @@ cython_debug/
 .gif
 .inp
 .out
+.zip
 
 /data
 /inputdatas

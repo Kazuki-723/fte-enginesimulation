@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import math
 import csv
 import matplotlib.pyplot as plt
@@ -253,6 +254,7 @@ class RocketSimulation:
         self.M_ox_arr = np.array([self.Mass_ox_remain])
         self.mdot_ox_arr = np.array([self.mdot_ox_init])
         self.gamma_arr = np.array([self.gamma_tmp1])
+        self.Df_arr = np.array([self.Df])
 
         print("epsilon_new = ", self.epsilon_new)
 
@@ -311,6 +313,7 @@ class RocketSimulation:
             self.F_arr = np.append(self.F_arr, self.F_new)
             self.OF_arr = np.append(self.OF_arr, self.OF_tmp1)
             self.Ap_arr = np.append(self.Ap_arr, self.Ap)
+            self.Df_arr = np.append(self.Df_arr, self.Df)
             self.mdot = self.mdot_ox + self.mdot_f
             self.mdot_arr = np.append(self.mdot_arr, self.mdot)
             self.Cstar_arr = np.append(self.Cstar_arr, self.Cstar_tmp1)
@@ -332,42 +335,8 @@ class RocketSimulation:
         print("Df_final = ", self.Df * 1000, "[mm]")
         print("F_ave =", self.It * 1000 / self.k, "[N]")
         time_ms = list(range(len(self.F_arr)))
-        return time_ms, self.F_arr, self.F_fte_arr, self.OF_arr, self.Cstar_arr, self.Pc_int_arr, self.Pt_arr
+        evolution_result = np.stack([self.F_arr, self.F_fte_arr, self.Pt_arr, self.Pc_int_arr, self.OF_arr, self.mdot_arr, self.Df_arr, self.Cstar_arr, self.CF_arr, self.M_ox_arr, self.mdot_ox_arr, self.gamma_arr]).T
+        return time_ms, self.F_arr, self.F_fte_arr, self.OF_arr, self.Cstar_arr, self.Pc_int_arr, self.Pt_arr, evolution_result
     
     def get_evolution_plot_base64(self, time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr):
         return IterationLogger.plot_time_series(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr)
-
-    def plot_and_save_results(self):
-        # ---------------- #
-        #      result
-        # ---------------- #
-        print("----------RESULT----------")
-        print("Kstar = ", self.Kstar)
-        print("O/F_init = ", self.OF_def, "[-]")
-        print("It = ", self.It, "[Ns]")
-        print("Lf = ", self.Lf * 1000, "[mm]")
-        print("Dt = ", self.Dt * 1000, "[mm]")
-        print("Df_init = ", self.Df_init * 1000, "[mm]")
-        print("Df_final = ", self.Df * 1000, "[mm]")
-        print("F_ave =", self.It * 1000 / self.k, "[N]")
-        print("F_init = ", self.F_req, "[N]")
-        print(self.Ae_new)
-
-        x = np.arange(len(self.F_arr))
-        x = x/1000
-        plt.plot(x, self.F_arr, label="CF")
-        plt.plot(x, self.F_fte_arr, label="mdot*Pe")
-        #plt.plot(x,OX_arr)
-        #plt.plot(x,eps_arr)
-        plt.show()
-
-        plt.plot(x, self.Pt_arr, label="Pt")
-        plt.plot(x, self.Pc_int_arr, label="Pc")
-        plt.show()
-
-        filename = f"FLXresult_forsimuration.csv"
-        F_values = np.stack([self.F_arr, self.F_fte_arr, self.Pt_arr, self.Pc_int_arr, self.OF_arr, self.mdot_arr, self.Cstar_arr, self.CF_arr, self.M_ox_arr, self.mdot_ox_arr, self.gamma_arr]).T
-        #F_values = np.stack([x,self.F_arr, self.F_fte_arr,self.mdot_ox_arr]).T
-        with open(filename, 'w', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file, quoting=csv.QUOTE_NONE)
-            writer.writerows(F_values)

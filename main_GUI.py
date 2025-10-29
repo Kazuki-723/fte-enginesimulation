@@ -1,4 +1,6 @@
 import flet as ft
+import pandas as pd
+import csv
 from inputprograms.rocket_simulation import RocketSimulation
 from inputprograms.interp_density import OxidizerDatabase
 import re
@@ -212,9 +214,24 @@ def main(page: ft.Page):
 
         pressure_input.on_change = on_pressure_change
 
-            # タンク容積と最終酸化剤圧力の入力欄
+        # タンク容積と最終酸化剤圧力の入力欄
         tank_volume_input = ft.TextField(label="タンク容積 [m³]", width=150)
         final_pressure_input = ft.TextField(label="最終酸化剤圧力 [MPa]", width=150)
+
+        csv_download_button = ft.ElevatedButton(
+            text="CSV出力 ⬇",
+            icon=ft.icons.DOWNLOAD,
+            visible=False,
+            on_click=lambda _: None
+        )
+
+
+        def get_csv_download_link(evolution_result):
+            print("output")
+            filename = f"result.csv"
+            with open(filename, 'w', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file, quoting=csv.QUOTE_NONE)
+                writer.writerows(evolution_result)
 
         # 関数に放り込む部分
         sim = RocketSimulation()
@@ -246,7 +263,8 @@ def main(page: ft.Page):
                 n = float(material_props["n"])
 
                 # RocketSimulation呼び出し
-                time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr = sim.integration_simulation(
+                time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr,\
+                evolution_result = sim.integration_simulation(
                     Pc=Pc,
                     Df=Df,
                     OF=OF,
@@ -272,6 +290,11 @@ def main(page: ft.Page):
             except Exception as ex:
                 evolution_output.value = f"⚠️ 計算エラー: {ex}"
                 print(ex)
+            def on_csv_download_click(e):
+                csv_data_url = get_csv_download_link(evolution_result)
+                page.launch_url(csv_data_url)
+            csv_download_button.on_click = on_csv_download_click
+            csv_download_button.visible = True
             results_graph_image.src_base64 = sim.get_evolution_plot_base64(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr)
             results_graph_image.visible = True
             page.update()
@@ -329,6 +352,7 @@ def main(page: ft.Page):
                 ft.Row(
                     controls=[
                         run_button,
+                        csv_download_button,
                         evolution_output
                     ],
                     alignment=ft.MainAxisAlignment.START,

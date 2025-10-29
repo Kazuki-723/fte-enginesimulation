@@ -69,7 +69,7 @@ class IterationLogger:
         plt.close(fig)
         return encoded
     
-    def plot_time_series(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr):
+    def plot_time_series(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr):
         fig, axs = plt.subplots(2, 2, figsize=(10, 8))
 
         # 1段目
@@ -87,7 +87,10 @@ class IterationLogger:
         axs[1, 0].set_xlabel("Time [ms]")
         axs[1, 0].set_ylabel("Charactaristic velosity [m/s]")
 
-        axs[1, 1].axis("off")
+        axs[1, 1].plot(time_ms, Pc_arr, marker='o')
+        axs[1, 1].plot(time_ms, Pt_arr, marker='o')
+        axs[1, 1].set_xlabel("Time [ms]")
+        axs[1, 1].set_ylabel("Pressure [MPa]")
         plt.tight_layout()
         buf = io.BytesIO()
         plt.savefig(buf, format="png")

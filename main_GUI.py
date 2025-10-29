@@ -1,10 +1,8 @@
 import flet as ft
-import pandas as pd
 import csv
 from inputprograms.rocket_simulation import RocketSimulation
 from inputprograms.interp_density import OxidizerDatabase
 import re
-
 
 def main(page: ft.Page):
     page.title = "Rocket Simulation GUI"

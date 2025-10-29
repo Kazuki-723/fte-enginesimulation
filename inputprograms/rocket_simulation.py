@@ -1,8 +1,5 @@
 import numpy as np
-import pandas as pd
 import math
-import csv
-import matplotlib.pyplot as plt
 from inputprograms.rocket_constants import *
 from inputprograms.cea_interface import CEAInterface
 from inputprograms.iteration_logger import IterationLogger
@@ -16,20 +13,13 @@ class RocketSimulation:
         # 定数・初期パラメータのセットアップ
         self.R_univ = R_univ
         self.Pa = Pa
-        self.Pa_max = Pa_max
-        self.Pa_min = Pa_min
+        # todo ここの依存性を消してconstantsのimportを飛ばす
+        self.rho_ox_init = rho_ox_init 
         self.Ptank_init = Ptank_init
-        self.Ptank_fin = Ptank_fin
         self.Pc_init = Pc_init
-        self.Pc_fin = Pc_fin
-        self.rho_ox_init = rho_ox_init
         self.rho_f_start = rho_f_start
         self.a_ox = a_ox
         self.n_ox = n_ox
-        self.Vol_ox = Vol_ox
-        self.Df_init = Df_init
-        self.Lf = Lf
-        self.Ve_th = 0
 
         # 積分計算用の配列初期化
         self.Pt_arr = np.array([])

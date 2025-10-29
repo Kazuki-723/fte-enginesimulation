@@ -332,10 +332,10 @@ class RocketSimulation:
         print("Df_final = ", self.Df * 1000, "[mm]")
         print("F_ave =", self.It * 1000 / self.k, "[N]")
         time_ms = list(range(len(self.F_arr)))
-        return time_ms, self.F_arr, self.F_fte_arr, self.OF_arr, self.Cstar_arr
+        return time_ms, self.F_arr, self.F_fte_arr, self.OF_arr, self.Cstar_arr, self.Pc_int_arr, self.Pt_arr
     
-    def get_evolution_plot_base64(self, time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr):
-        return IterationLogger.plot_time_series(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr)
+    def get_evolution_plot_base64(self, time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr):
+        return IterationLogger.plot_time_series(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr)
 
     def plot_and_save_results(self):
         # ---------------- #

@@ -74,11 +74,14 @@ def main(page: ft.Page):
         )
 
         # 右側：収束グラフと K* グラフを縦に並べる
-        graph_image = ft.Image(visible=False, expand=True)
+        graph_image = ft.Image(visible=False)
 
         graph_column = ft.Column(
             controls=[graph_image],
             spacing=10,
+            expand=True,
+            height=page.window_height + 100,
+            scroll=ft.ScrollMode.AUTO,
             alignment=ft.MainAxisAlignment.START
         )
 
@@ -243,7 +246,7 @@ def main(page: ft.Page):
                 n = float(material_props["n"])
 
                 # RocketSimulation呼び出し
-                time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr = sim.integration_simulation(
+                time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr = sim.integration_simulation(
                     Pc=Pc,
                     Df=Df,
                     OF=OF,
@@ -269,7 +272,7 @@ def main(page: ft.Page):
             except Exception as ex:
                 evolution_output.value = f"⚠️ 計算エラー: {ex}"
                 print(ex)
-            results_graph_image.src_base64 = sim.get_evolution_plot_base64(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr)
+            results_graph_image.src_base64 = sim.get_evolution_plot_base64(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr)
             results_graph_image.visible = True
             page.update()
 

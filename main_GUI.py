@@ -218,7 +218,7 @@ def main(page: ft.Page):
 
         csv_download_button = ft.ElevatedButton(
             text="CSV出力 ⬇",
-            icon=ft.icons.DOWNLOAD,
+            icon=ft.Icons.DOWNLOAD,
             visible=False,
             on_click=lambda _: None,
         )

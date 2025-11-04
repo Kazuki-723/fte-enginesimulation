@@ -32,13 +32,24 @@ uvで管理して(もらって)いるので，そちらでも可．
 実行してみておかしかった時の確認点
 デバッグ中なので後で作る．
 
+## GUIファイル以外について
+main_gui.pyでGUIversionを回すために必要なのは，
+
+- inputprograms
+- inputdatas (NISTから密度曲線のcsvを持ってくるところ)
+- data (CEA置いておくところ)
+
+で，残りは，過去のCUIversion用のフォルダとなっている．
+
+おおよそ，
+FLXsimulation.pyが一番古いデータで，そこからフォルダ整理したのが，main.py-pythonfliesの部分
+残りはおおよそ試行錯誤中の子たち．
 # Version History
 リリース後追記予定
 
 # developer's Memo
 実装予定機能，不審挙動についてまとめる．
 
-- 入力の整理(constants.pyのimport除外)
 - 出力側に入力データのprint
 - 出力にラベルを振る
 - x,yのvalueを選択してプロットする機能

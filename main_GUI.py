@@ -36,9 +36,78 @@ def main(page: ft.Page):
         result_text = ft.Text()
         graph_image = ft.Image(visible=False, width=page.window.width - 200)
 
+                # 登録物質と物性値（a, n は仮値）
+        materials = {
+            "PMMA": {"密度": 1190, "a": 0.000131, "n": 0.34},
+            "ABS": {"密度": 1040, "a": 0.90, "n": 1.1},
+        }
+
+        # 表示用テキスト群
+        density_text = ft.Text(value="密度: -", size=16)
+        a_text = ft.Text(value="a: -", size=16)
+        n_text = ft.Text(value="n: -", size=16)
+
+        def on_material_change(e):
+            name = e.control.value
+            props = materials.get(name, {})
+            density_text.value = f"密度: {props.get('密度', '-')} kg/m³"
+            a_text.value = f"a: {props.get('a', '-')}"
+            n_text.value = f"n: {props.get('n', '-')}"
+            page.session.set(
+                "material_properties", props
+            )  # RocketSimulation側に渡す準備
+            page.update()
+
+        material_dropdown = ft.Dropdown(
+            label="固体燃料を選択",
+            options=[ft.dropdown.Option(name) for name in materials.keys()],
+            on_change=on_material_change,
+            width=250,
+        )
+
+        property_column = ft.Column(controls=[density_text, a_text, n_text], spacing=5)
+
+        # 酸化剤補完データベース
+        ox_db = OxidizerDatabase()
+
+        pressure_input = ft.TextField(label="初期酸化剤圧力 [MPa]", width=150)
+        density_output = ft.Text(value="酸化剤密度: -", size=16)
+
+        def on_pressure_change(e):
+            try:
+                p = float(pressure_input.value)
+                result = ox_db.get_density(p)
+                density_output.value = result
+            except ValueError:
+                density_output.value = "⚠️ 数値で入力してください"
+            page.update()
+
+        pressure_input.on_change = on_pressure_change
+
         def run_simulation(e):
             try:
                 values = {k: float(inputs[k].value) for k in inputs}
+                print(values)
+                # 追加項目の取得と格納
+                # 酸化剤密度（補完済みテキストから抽出）
+                rho_ox = float(
+                    density_output.value.split(":")[-1].replace("kg/m³", "").strip()
+                )
+                # 燃料密度・定数a,n（Dropdown選択から取得）
+                material_props = page.session.get("material_properties")
+                rho_fuel = float(material_props["密度"])
+                a = float(material_props["a"])
+                n = float(material_props["n"])
+
+                values["Ptank_init"] = float(pressure_input.value)
+                values["rho_ox_init"] = rho_ox
+                values["rho_f_start"] = rho_fuel
+
+                material_props = page.session.get("material_properties")
+                values["a_ox"] = a
+                values["n_ox"] = n
+                print(values)
+
             except ValueError:
                 result_text.value = "⚠️ 全ての値を数値で入力してください"
                 page.update()
@@ -67,7 +136,13 @@ def main(page: ft.Page):
 
         # 左側：入力群＋結果＋ボタン群＋ログ
         input_column = ft.Column(
-            controls=[*list(inputs.values()), action_row, result_text],
+            controls=[*list(inputs.values()),
+                    pressure_input,
+                    density_output,
+                    material_dropdown,
+                    property_column,
+                    action_row, 
+                    result_text],
             spacing=10,
             expand=True,
             height=page.window.height + 100,
@@ -142,6 +217,11 @@ def main(page: ft.Page):
         eta_cstar = str(initial["eta_cstar"]) if initial else ""
         eta_nozzle = str(initial["eta_nozzle"]) if initial else ""
         OF_def = str(initial["OF_def"]) if initial else ""
+        Pt_init = str(initial["Ptank_init"]) if initial else ""
+        rho_ox = str(initial["rho_ox_init"]) if initial else ""
+        rho_f = str(initial["rho_f_start"]) if initial else ""
+        a_ox = str(initial["a_ox"]) if initial else ""
+        n_ox = str(initial["n_ox"]) if initial else ""
 
         Kstar = str(results_parsed["Kstar"]) if results_parsed else ""
         epsilon = str(results_parsed["epsilon"]) if results_parsed else ""
@@ -157,6 +237,7 @@ def main(page: ft.Page):
         eta_cstar_box = ft.TextField(label="C*効率", value=eta_cstar, width=150)
         eta_nozzle_box = ft.TextField(label="ノズル効率", value=eta_nozzle, width=150)
 
+
         Kstar_box = ft.TextField(label="K*", value=Kstar, width=150)
         epsilon_box = ft.TextField(label="膨張比 ε", value=epsilon, width=150)
         Lf_box = ft.TextField(label="燃焼長 Lf [m]", value=Lf, width=150)
@@ -164,56 +245,10 @@ def main(page: ft.Page):
         F_box = ft.TextField(label="初期推力F [N]", value=F, width=150)
         Dt_box = ft.TextField(label="スロート径 [m]", value=Dt, width=150)
 
-        # 登録物質と物性値（a, n は仮値）
-        materials = {
-            "PMMA": {"密度": 1190, "a": 0.000131, "n": 0.34},
-            "ABS": {"密度": 1040, "a": 0.90, "n": 1.1},
-        }
-
-        # 表示用テキスト群
-        density_text = ft.Text(value="密度: -", size=16)
-        a_text = ft.Text(value="a: -", size=16)
-        n_text = ft.Text(value="n: -", size=16)
-
-        def on_material_change(e):
-            name = e.control.value
-            props = materials.get(name, {})
-            density_text.value = f"密度: {props.get('密度', '-')} kg/m³"
-            a_text.value = f"a: {props.get('a', '-')}"
-            n_text.value = f"n: {props.get('n', '-')}"
-            page.session.set(
-                "material_properties", props
-            )  # RocketSimulation側に渡す準備
-            page.update()
-
-        material_dropdown = ft.Dropdown(
-            label="固体燃料を選択",
-            options=[ft.dropdown.Option(name) for name in materials.keys()],
-            on_change=on_material_change,
-            width=250,
-        )
-
-        property_column = ft.Column(controls=[density_text, a_text, n_text], spacing=5)
-
-        # 酸化剤補完データベース
-        ox_db = OxidizerDatabase()
-
-        pressure_input = ft.TextField(label="酸化剤圧力 [MPa]", width=150)
-        density_output = ft.Text(value="酸化剤密度: -", size=16)
-
-        def on_pressure_change(e):
-            try:
-                p = float(pressure_input.value)
-                result = ox_db.get_density(p)
-                density_output.value = result
-            except ValueError:
-                density_output.value = "⚠️ 数値で入力してください"
-            page.update()
-
-        pressure_input.on_change = on_pressure_change
-
         # タンク容積と最終酸化剤圧力の入力欄
         tank_volume_input = ft.TextField(label="タンク容積 [m³]", width=150)
+        initial_pressure_input = ft.TextField(label="初期酸化剤圧力 [MPa]", value=Pt_init,width=150)
+        rho_ox_input = ft.TextField(label="初期酸化剤密度(DBから自分で算出してください) [kg/s]", value=rho_ox,width=150)
         final_pressure_input = ft.TextField(label="最終酸化剤圧力 [MPa]", width=150)
 
         csv_download_button = ft.ElevatedButton(
@@ -246,21 +281,14 @@ def main(page: ft.Page):
                 Lf = float(Lf_box.value)
                 mdot = float(mdot_box.value)
                 V_tank = float(tank_volume_input.value)
-                P_init = float(pressure_input.value)
+                P_init = float(initial_pressure_input.value)
                 P_final = float(final_pressure_input.value)
                 F_init = float(F_box.value)
                 Dt = float(Dt_box.value)
-
-                # 酸化剤密度（補完済みテキストから抽出）
-                rho_ox = float(
-                    density_output.value.split(":")[-1].replace("kg/m³", "").strip()
-                )
-
-                # 燃料密度・定数a,n（Dropdown選択から取得）
-                material_props = page.session.get("material_properties")
-                rho_fuel = float(material_props["密度"])
-                a = float(material_props["a"])
-                n = float(material_props["n"])
+                rho_ox = float(rho_ox_input.value)
+                rho_f = initial["rho_f_start"]
+                a_ox = initial["a_ox"]
+                n_ox = initial["n_ox"]
 
                 # RocketSimulation呼び出し
                 (
@@ -286,9 +314,9 @@ def main(page: ft.Page):
                     P_init=P_init,
                     P_final=P_final,
                     rho_ox=rho_ox,
-                    rho_fuel=rho_fuel,
-                    a=a,
-                    n=n,
+                    rho_fuel=rho_f,
+                    a=a_ox,
+                    n=n_ox,
                     F=F_init,
                     Dt=Dt,
                 )
@@ -352,11 +380,9 @@ def main(page: ft.Page):
                                 ft.Text("初期状態パラメータ③："),
                                 Dt_box,
                                 tank_volume_input,
+                                initial_pressure_input,
+                                rho_ox_input, 
                                 final_pressure_input,
-                                pressure_input,
-                                density_output,
-                                material_dropdown,
-                                property_column,
                             ],
                             spacing=10,
                         ),

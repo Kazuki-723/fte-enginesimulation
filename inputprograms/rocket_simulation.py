@@ -1,6 +1,5 @@
 import numpy as np
 import math
-from inputprograms.rocket_constants import *
 from inputprograms.cea_interface import CEAInterface
 from inputprograms.iteration_logger import IterationLogger
 
@@ -13,13 +12,6 @@ class RocketSimulation:
         # 定数・初期パラメータのセットアップ
         self.R_univ = R_univ
         self.Pa = Pa
-        # todo ここの依存性を消してconstantsのimportを飛ばす
-        self.rho_ox_init = rho_ox_init 
-        self.Ptank_init = Ptank_init
-        self.Pc_init = Pc_init
-        self.rho_f_start = rho_f_start
-        self.a_ox = a_ox
-        self.n_ox = n_ox
 
         # 積分計算用の配列初期化
         self.Pt_arr = np.array([])
@@ -35,7 +27,7 @@ class RocketSimulation:
         self.kstar_cd_list = np.array([])
 
 
-    def initial_convergence(self, F_req, Pc_def, OF_def, mdot_new, Df_init, eta_cstar, eta_nozzle):
+    def initial_convergence(self, F_req, Pc_def, OF_def, mdot_new, Df_init, eta_cstar, eta_nozzle, Ptank_init, rho_ox_init, rho_f_start, a_ox, n_ox):
         log = []
 
         # 入力パラメータの設定
@@ -48,6 +40,11 @@ class RocketSimulation:
         self.eta_cstar = eta_cstar
         self.eta_nozzle = eta_nozzle
         self.eta = eta_cstar * eta_nozzle
+        self.rho_ox_init = rho_ox_init 
+        self.Ptank_init = Ptank_init
+        self.rho_f_start = rho_f_start
+        self.a_ox = a_ox
+        self.n_ox = n_ox
 
         #epsilon 調整
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
@@ -135,7 +132,7 @@ class RocketSimulation:
         self.mdot_f_init = (1 / (self.OF_def + 1)) * self.mdot_new  # 初期燃料流量[kg/s]
 
         # Discharge coef. * orifice cross section
-        self.Kstar = self.mdot_ox_init / np.sqrt(2 * self.rho_ox_init * ((self.Ptank_init - self.Pc_init) * 1e6))
+        self.Kstar = self.mdot_ox_init / np.sqrt(2 * self.rho_ox_init * ((self.Ptank_init - self.Pc_def) * 1e6))
 
         # O/F, 燃料形状
         self.OF_tmp1 = self.mdot_ox_init / self.mdot_f_init

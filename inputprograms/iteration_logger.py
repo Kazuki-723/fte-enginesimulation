@@ -25,6 +25,7 @@ class IterationLogger:
             "epsilon": [entry["epsilon"] for entry in self.log],
         }
 
+    # 初期値側のグラフ表示
     def get_base64_plot(self, Dovalue, cdvalue):
         data = self.get_lists()
         print("plot start")
@@ -54,7 +55,7 @@ class IterationLogger:
         axs[2, 1].axis("off")
 
         # 軸ラベルとグリッド
-        for i in range(2):  # 最後の行は Do vs Cd なので "Iteration" ラベル不要
+        for i in range(2):
             for j in range(2):
                 axs[i, j].set_xlabel("Iteration")
                 axs[i, j].grid(True)
@@ -68,7 +69,8 @@ class IterationLogger:
         buf.close()
         plt.close(fig)
         return encoded
-    
+
+    # 時間発展側のグラフ表示
     def plot_time_series(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr):
         fig, axs = plt.subplots(2, 2, figsize=(10, 8))
 

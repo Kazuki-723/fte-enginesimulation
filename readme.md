@@ -58,6 +58,8 @@ FLXsimulation.pyが一番古いデータで，そこからフォルダ整理し�
 # Reference
 George P Sutton and Oscar Biblarz. Rocket Propulsion Elements. John Wiley & Sons, 9th edition, 2016. ISBN 9781118753910.
 
+Richard Nakka's Experimental Rocketry Web Site, https://www.nakka-rocketry.net/
+
 Sanford Gordan and Bonnie J. McBride. Computer program for calculation of complex chemical equilibrium compositions and applications. I: analysis. 1994. NASA-RP-1311. URL: https://ntrs.nasa.gov/citations/19950013764.
 
 Sanford Gordan and Bonnie J. McBride. Computer program for calculation of complex chemical equilibrium compositions and applications. II. users manual and program description. 1996. NASA-RP-1311. URL: https://ntrs.nasa.gov/citations/19960044559.

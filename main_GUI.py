@@ -258,12 +258,44 @@ def main(page: ft.Page):
             on_click=lambda _: None,
         )
 
-        def get_csv_download_link(evolution_result):
+        def get_csv_download_link(input_params, evolution_result):
             print("output")
+
+            # ヘッダー行（evolution_resultの列順に対応）
+            evolution_headers = [
+                "F [N]",
+                "F_fte [N]",
+                "Ptank [MPa]",
+                "Pc [MPa]",
+                "O/F [-]",
+                "mdot [kg/s]",
+                "Df [m]",
+                "C* [m/s]",
+                "CF [-]",
+                "tank mass [g]",
+                "mdot_ox [g/ms]",
+                "gamma [-]"
+            ]
+
             filename = f"result.csv"
             with open(filename, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file, quoting=csv.QUOTE_NONE)
+                # ✅ 入力パラメータの書き出し
+                writer.writerow(["# input params."])
+                for i in range(0, len(input_params), 3):
+                    row = []
+                    for j in range(3):
+                        if i + j < len(input_params):
+                            key, val = input_params[i + j]
+                            row.extend([key, val])
+                    writer.writerow(row)
+
+
+                writer.writerow([])  # 空行
+                writer.writerow(["# evolution params."])
+                writer.writerow(evolution_headers)
                 writer.writerows(evolution_result)
+
 
         # 関数に放り込む部分
         sim = RocketSimulation()
@@ -326,9 +358,17 @@ def main(page: ft.Page):
             except Exception as ex:
                 evolution_output.value = f"⚠️ 計算エラー: {ex}"
                 print(ex)
-
+            
+            input_params = [
+                ("Pc", Pc), ("Df", Df), ("OF", OF),
+                ("eta_cstar", eta_cstar), ("eta_nozzle", eta_nozzle), ("Kstar", Kstar),
+                ("epsilon", epsilon), ("Lf", Lf), ("mdot", mdot),
+                ("V_tank", V_tank), ("P_init", P_init), ("P_final", P_final),
+                ("rho_ox", rho_ox), ("rho_fuel", rho_f),
+                ("a", a_ox), ("n", n_ox), ("F", F_init), ("Dt", Dt)
+            ]
             def on_csv_download_click(e):
-                csv_data_url = get_csv_download_link(evolution_result)
+                csv_data_url = get_csv_download_link(input_params, evolution_result)
                 page.launch_url(csv_data_url)
 
             csv_download_button.on_click = on_csv_download_click

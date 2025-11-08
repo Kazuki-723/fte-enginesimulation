@@ -332,6 +332,7 @@ def main(page: ft.Page):
                     Pc_arr,
                     Pt_arr,
                     evolution_result,
+                    It,
                 ) = sim.integration_simulation(
                     Pc=Pc,
                     Df=Df,
@@ -354,7 +355,7 @@ def main(page: ft.Page):
                 )
 
                 # 結果表示（仮）
-                evolution_output.value = f"✅ 計算完了"
+                evolution_output.value = f"✅ 計算完了, Total Inpulse = {It}[Ns]"
             except Exception as ex:
                 evolution_output.value = f"⚠️ 計算エラー: {ex}"
                 print(ex)

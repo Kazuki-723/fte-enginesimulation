@@ -283,7 +283,7 @@ class RocketSimulation:
 
             # Ptの計算
             self.Ptank_tmp1 = self.Ptank_fin + (self.Ptank_init - self.Ptank_fin) * (self.Mass_ox_remain / self.Mass_ox)
-            self.Pc_tmp1 = 4 * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) /(math.pi * self.Dt ** 2 ) / 1000000
+            self.Pc_tmp1 = 4 * self.eta_cstar * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) /(math.pi * self.Dt ** 2 ) / 1000000
             self.k = self.k + 1
 
             print("Pc_tmp1 = ", self.Pc_tmp1)

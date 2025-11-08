@@ -5,8 +5,8 @@ import pandas as pd
 from inputprograms.interp_density import OxidizerDatabase
 
 # 圧力と分率の範囲設定
-P_vals = np.linspace(0.1, 7.0, 200)  # MPa（横軸）
-f_vals = np.linspace(0.0, 1.0, 200)  # 液相質量分率（縦軸）
+P_vals = np.linspace(0.1, 5.0, 490)  # MPa（横軸）
+f_vals = np.linspace(0.0, 1.0, 400)  # 液相質量分率（縦軸）
 
 rho_mix = np.zeros((len(f_vals), len(P_vals)))  # 行: 分率, 列: 圧力
 P_grid, f_grid = np.meshgrid(P_vals, f_vals)

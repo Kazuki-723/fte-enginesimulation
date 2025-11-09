@@ -66,6 +66,7 @@ m_out_total = 0
 
 # 時間ステップで更新
 t = 0
+i = 0
 while liquid_frac > 0.01:
     m_out = mdot_out * dt
     m_out_total += m_out
@@ -110,9 +111,11 @@ while liquid_frac > 0.01:
     print("liquid_mass = ", m_liquid * 1000)
     print("gas_v = ", v_gas * 1000)
     print("liquid_v = ", v_liquid * 1000)
+    print("------")
 
     Pt = P
     t += dt
+    i += 1
 
 # 結果のプロット
 plt.figure(figsize=(10, 5))

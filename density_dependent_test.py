@@ -9,7 +9,7 @@ db = OxidizerDatabase()
 V_total = 0.002    # タンク容積 [m^3]
 Pt_init = 4.2      # 初期内圧 [MPa] 
 m_gas = 0          # 初期気相質量 [kg]
-dt = 0.001           # 微小時間ステップ [s]
+dt = 0.1           # 微小時間ステップ [s]
 mdot_out = 0.2     # 排出質量流量 [kg/s]
 v_liquid = V_total # 初期液相体積 [m^3]
 v_gas = 0          # 初期気相体積 [m^3]
@@ -71,11 +71,11 @@ while liquid_frac > 0.01:
     m_out = mdot_out * dt
     m_out_total += m_out
     m_liquid = max(m_liquid - m_out, 0)
-    v_out = m_out / db.li_interp(Pt)
+    v_out_temp = m_out / db.li_interp(Pt)
 
     # 各相体積計算
+    v_out = v_out_temp * (1 + ((db.va_interp(Pt))/(db.li_interp(Pt) - db.va_interp(Pt))))
     v_gas += v_out
-    v_gas = v_gas * (1 + ((db.va_interp(Pt))/(db.li_interp(Pt) - db.va_interp(Pt))))
     v_liquid = V_total - v_gas
     liquid_frac = v_liquid / V_total
     print("liquid_frac =",liquid_frac)

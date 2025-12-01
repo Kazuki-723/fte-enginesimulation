@@ -147,36 +147,38 @@ def load_phase_csv(path: str, is_liquid: bool) -> PhaseTable:
 # ----------------------------
 # Dyer model for liquid-only discharge using table properties
 # ----------------------------
-
-class DyerLiquidOnlyCSV:
-    def __init__(self, V_tank_m3: float,
-                 liquid: PhaseTable,
-                 vapor: PhaseTable,
-                 A_orifice_m2: float,
-                 Cd: float,
-                 C_down: float,
-                 T_wall_K: float = None,
-                 h_wall_Wm2K: float = 0.0,
-                 A_wall_m2: float = 0.0):
+class DyerLiquidOnlyCSV_3Layer:
+    def __init__(self, V_tank_m3, liquid, vapor,
+                 k_star, C_down,
+                 T_air_K, h_air_Wm2K,
+                 k_wall_WmK, delta_wall_m, A_wall_m2,
+                 h_liq_Wm2K):
         self.V = V_tank_m3
         self.liq = liquid
         self.vap = vapor
-        self.A_or = A_orifice_m2
-        self.Cd = Cd
+        self.k_star = k_star
         self.C_down = C_down
-        self.T_wall = T_wall_K
-        self.h_wall = h_wall_Wm2K
+
+        # 三層熱伝達パラメータ
+        self.T_air = T_air_K
+        self.h_air = h_air_Wm2K
+        self.k_wall = k_wall_WmK
+        self.delta_wall = delta_wall_m
         self.A_wall = A_wall_m2
+        self.h_liq = h_liq_Wm2K
 
     def Psat(self, T):
         return self.liq.Psat_Pa(T)
 
     def Q_wall(self, T_l):
-        if self.h_wall <= 0.0 or self.A_wall <= 0.0 or self.T_wall is None:
-            return 0.0
-        return self.h_wall * self.A_wall * (self.T_wall - T_l)
+        """外気→壁→液体の三層熱伝達で液体への入熱を計算"""
+        R_air = 1.0 / (self.h_air * self.A_wall)
+        R_wall = self.delta_wall / (self.k_wall * self.A_wall)
+        R_liq = 1.0 / (self.h_liq * self.A_wall)
+        R_tot = R_air + R_wall + R_liq
+        return (self.T_air - T_l) / R_tot
 
-    def algebraic_state(self, m_l: float, T_l: float):
+    def algebraic_state(self, m_l, T_l):
         rho_l = self.liq.rho_kg_m3(T_l)
         V_v = max(self.V - m_l / rho_l, 0.0)
         P = self.Psat(T_l)
@@ -184,28 +186,27 @@ class DyerLiquidOnlyCSV:
         m_v = rho_v * V_v
         return V_v, P, m_v
 
-    def flow_liquid(self, T_l: float, Pt: float) -> float:
-        """液相流出量を計算。下流圧は Pt に依存"""
+    def flow_liquid(self, T_l, Pt):
         rho_l = self.liq.rho_kg_m3(T_l)
-        P_down = self.C_down * math.sqrt(Pt)   # ★ 下流圧を変数化
+        P_down = self.C_down * math.sqrt(Pt)
         dp = max(Pt - P_down, 0.0)
-        return self.Cd * self.A_or * rho_l * math.sqrt(2.0 * dp / rho_l)
+        return self.k_star * rho_l * math.sqrt(2.0 * dp / rho_l)
 
-    def step(self, m_l: float, T_l: float, dt: float):
-        # 現在のタンク圧
+    def step(self, m_l, T_l, dt):
         Vv0, Pt, mv0 = self.algebraic_state(m_l, T_l)
 
-        # 液相流出量（Ptに依存）
+        # 液相流出
         m_out = self.flow_liquid(T_l, Pt)
-        dm_l = -m_out * dt
-        m_l_pred = max(m_l + dm_l, 0.0)
+        m_l_pred = max(m_l - m_out * dt, 0.0)
 
-        # 新しい蒸気量
+        # 蒸気量変化
         Vv1, Pt1, mv1 = self.algebraic_state(m_l_pred, T_l)
         m_ph = (mv1 - mv0) / dt
 
-        # エネルギー収支
+        # 三層熱伝達による入熱
         Qw = self.Q_wall(T_l)
+
+        # エネルギー収支
         h_l = self.liq.h_J_kg(T_l)
         u_l = self.liq.u_J_kg(T_l)
         h_v = self.vap.h_J_kg(T_l)
@@ -220,14 +221,15 @@ class DyerLiquidOnlyCSV:
 
         diag = {
             "P_tank_Pa": PtN,
-            "P_down_Pa": self.C_down * math.sqrt(PtN),  # ★ 下流圧履歴も記録
+            "P_down_Pa": self.C_down * PtN,
             "T_K": T_l_new,
             "m_l_kg": m_l_pred,
             "m_v_kg": mvN,
             "m_out_kg_s": m_out,
-            "V_v_m3": VvN,
-            "rho_l_kg_m3": self.liq.rho_kg_m3(T_l_new),
             "m_ph_kg_s": m_ph,
+            "Q_wall_W": Qw,
+            "V_v_m3": VvN,
+            "rho_l_kg_m3": self.liq.rho_kg_m3(T_l)
         }
         return m_l_pred, T_l_new, diag
 
@@ -286,17 +288,20 @@ if __name__ == "__main__":
           f"rho_l={rho_l0:.1f} kg/m^3, m_l={m_l0:.3f} kg")
 
     # Discharge model (liquid-only)
-    model = DyerLiquidOnlyCSV(
-        V_tank_m3=V_tank,
+    model = DyerLiquidOnlyCSV_3Layer(
+        V_tank_m3=0.002,
         liquid=liquid,
         vapor=vapor,
-        A_orifice_m2=math.pi / 4 * 0.004**2, 
-        Cd=0.4,
+        k_star = 4.712e-6,
         C_down=C,
-        T_wall_K=None,        # adiabatic by default
-        h_wall_Wm2K=0.0,
-        A_wall_m2=0.0
+        T_air_K=293,        # 外気温 25℃
+        h_air_Wm2K=10.0,      # 外気側熱伝達係数
+        k_wall_WmK=130.0,      # アルミ壁の熱伝導率
+        delta_wall_m=0.01,   # 壁厚 10 mm
+        A_wall_m2=0.05,       # タンク内壁面積
+        h_liq_Wm2K=200.0      # 内部液体側熱伝達係数
     )
+
 
     # Time integration
     t = 0.0

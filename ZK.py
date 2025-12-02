@@ -5,6 +5,7 @@ from typing import List
 from scipy.interpolate import CubicSpline
 import matplotlib.pyplot as plt
 from scipy.optimize import fsolve
+from scipy.optimize import root
 
 # ----------------------------
 # ユーティリティ
@@ -136,9 +137,10 @@ def ullage_volume(cfg: TankConfig, st: TankState, liquid: PhaseTable):
 def tank_pressure(st: TankState, liquid: PhaseTable):
     return liquid.Psat_Pa(st.T_liq)
 
-def choked_mass_flow(P_tank, T_gas, cfg: TankConfig):
-    R = cfg.R_g
-    rho = P_tank / (R * T_gas)
+def choked_mass_flow(P_tank, T_liquid, cfg: TankConfig):
+    # R = cfg.R_g
+    # rho = P_tank / (R * T_liquid)
+    rho = liquid.rho_kg_m3(T_liquid)
     dP = max(P_tank - cfg.P_down, 0.0)
     return cfg.Cd * cfg.A_orifice * np.sqrt(2 * dP * rho)
 
@@ -148,42 +150,49 @@ def invert_u_to_T(table: PhaseTable, u_target: float, T_guess: float = 290.0):
     T_sol = fsolve(f, T_guess)
     return float(T_sol[0])
 
-def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: PhaseTable):
-    V_gas = ullage_volume(cfg, st, liquid)
-    P = tank_pressure(st, liquid)
-
-    # 吐出流量
-    m_dot_out_g = choked_mass_flow(P, st.T_gas, cfg)
-
-    # 飽和条件に合わせて蒸発量を調整
-    rho_g_sat = vapor.rho_kg_m3(st.T_liq)
-    m_g_required = rho_g_sat * V_gas
-    dm_g_target = m_g_required - st.m_gas
-    # 蒸発量を制限（液質量の数％/s）
-    m_dot_evap = np.clip(dm_g_target/dt, -0.02*st.m_liq/dt, 0.02*st.m_liq/dt)
-
+def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: PhaseTable,
+         max_iter: int = 20):
     # 内部エネルギー
     U_liq = st.m_liq * liquid.u_J_kg(st.T_liq)
     U_gas = st.m_gas * vapor.u_J_kg(st.T_gas)
 
-    # エネルギー収支更新
-    L = vapor.h_J_kg(st.T_liq) - liquid.h_J_kg(st.T_liq)  # 潜熱近似
-    U_liq_new = U_liq - m_dot_evap * L * dt
-    U_gas_new = U_gas + m_dot_evap * L * dt - m_dot_out_g * vapor.h_J_kg(st.T_gas) * dt
+    # 現在圧力（Psat(T_liq)）
+    P = liquid.Psat_Pa(st.T_liq)
+
+    # 吐出流量（液相のみ）
+    m_dot_out_l = choked_mass_flow(P, st.T_liq, cfg)
+
+    # 吐出後の液の暫定状態（蒸発前）
+    m_liq_minus = max(st.m_liq - m_dot_out_l * dt, 1e-9)
+    U_liq_minus = U_liq - m_dot_out_l * liquid.h_J_kg(st.T_liq) * dt
+
+    # 非線形方程式で蒸発量と界面温度を解く（省略可、ここでは簡易版）
+    rho_g_sat = vapor.rho_kg_m3(st.T_liq)
+    V_gas = ullage_volume(cfg, st, liquid)
+    m_g_required = rho_g_sat * V_gas
+    dm_evap = (m_g_required - st.m_gas)  # 必要ガス質量との差分
+    dm_evap = np.clip(dm_evap, -0.01*st.m_liq, 0.01*st.m_liq)  # 安定化
+
+    # 潜熱
+    L = vapor.h_J_kg(st.T_liq) - liquid.h_J_kg(st.T_liq)
 
     # 質量更新
-    m_liq_new = max(st.m_liq - m_dot_evap * dt, 1e-6)
-    m_gas_new = max(st.m_gas + m_dot_evap * dt - m_dot_out_g * dt, 1e-9)
+    m_liq_new = max(m_liq_minus - dm_evap, 1e-9)
+    m_gas_new = max(st.m_gas + dm_evap, 1e-9)
 
-    # 温度更新（内部エネルギーから逆算）
+    # エネルギー更新
+    U_liq_new = U_liq_minus - dm_evap * L
+    U_gas_new = U_gas + dm_evap * L  # ガスは排出されないので吐出項なし
+
+    # 温度逆写像
     T_liq_new = invert_u_to_T(liquid, U_liq_new / m_liq_new, T_guess=st.T_liq)
     T_gas_new = invert_u_to_T(vapor, U_gas_new / m_gas_new, T_guess=st.T_gas)
 
+    # 状態更新
     st.m_liq, st.m_gas = m_liq_new, m_gas_new
     st.T_liq, st.T_gas = T_liq_new, T_gas_new
 
-    return st, P, m_dot_out_g
-
+    return st, P, m_dot_out_l, V_gas
 
 # ----------------------------
 # 初期条件設定関数
@@ -221,8 +230,8 @@ if __name__ == "__main__":
     cfg = TankConfig(
         V_tank=V_tank,
         A_orifice=np.pi/4 * (0.004**2),  # オリフィス径4mm相当
-        Cd=0.4,
-        T_wall=293.15,
+        Cd=0.34,
+        T_wall=273,
         P_down=2e6,                      # 下流圧 [Pa]
         R_g=R_univ / M_N2O,
         gamma_g=1.25
@@ -238,15 +247,15 @@ if __name__ == "__main__":
 
 
     # 時間発展パラメータ
-    dt = 0.01
-    t_end = 50.0
+    dt = 0.001
+    t_end = 100.0
     t = 0.0
 
     # ログ
     log_t, log_P, log_Tl, log_Tg, log_mL, log_mG, log_mout = [], [], [], [], [], [], []
 
-    while t < t_end and st.m_liq > 0.05:
-        st, P, m_dot_out = step(cfg, st, dt, liquid, vapor)
+    while t < t_end:
+        st, P, m_dot_out, V_gas = step(cfg, st, dt, liquid, vapor)
         t += dt
         log_t.append(t)
         log_P.append(P)
@@ -257,13 +266,14 @@ if __name__ == "__main__":
         log_mout.append(m_dot_out)
 
         total_mass = st.m_liq + st.m_gas
-        gas_fraction = st.m_gas / total_mass
+        gas_fraction = V_gas / V_tank
 
-        # 一定時間ごとにprint（例：1秒ごと）
-        if int(t/dt) % int(1.0/dt) == 0:
+        # 一定時間ごとにprint
+        if int(t/dt) % int(0.1/dt) == 0:
             print(f"t={t:.2f}s, P={P/1e5:.2f} bar, T_liq={st.T_liq:.2f} K, "
                   f"T_gas={st.T_gas:.2f} K, m_liq={st.m_liq:.3f} kg, "
-                  f"m_gas={st.m_gas:.3f} kg, gas_frac={gas_fraction*100:.1f}%")
+                  f"m_gas={st.m_gas:.3f} kg, gas_frac={gas_fraction*100:.1f}%"
+                  f"m_dot={m_dot_out:.3f} kg/s")
 
         # 気相が99%以上になったら停止
         if gas_fraction >= 0.99:
@@ -272,7 +282,7 @@ if __name__ == "__main__":
 
 
     # 結果表示
-    fig, axs = plt.subplots(3, 1, figsize=(8, 10))
+    fig, axs = plt.subplots(1, 3, figsize=(8, 10))
 
     axs[0].plot(log_t, np.array(log_P)/1e5)
     axs[0].set_ylabel("Tank Pressure [bar]")

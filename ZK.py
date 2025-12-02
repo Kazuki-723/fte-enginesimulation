@@ -151,48 +151,107 @@ def invert_u_to_T(table: PhaseTable, u_target: float, T_guess: float = 290.0):
     return float(T_sol[0])
 
 def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: PhaseTable,
-         max_iter: int = 20):
+         alpha_evap: float = 0.3, alpha_sat: float = 0.5, clip_frac: float = 0.01,
+         Vliq_hysteresis: tuple = (0.03, 0.01), q_int_W: float = 0.0):
+    """
+    alpha_evap: 蒸発量のアンダーリラクゼーション係数 (0<α≤1)
+    alpha_sat : 飽和投影の差分緩和係数
+    clip_frac : ステップあたりの蒸発上限 (液質量に対する比率)
+    Vliq_hysteresis: (抑制開始液体体積比, ガスモード切替液体体積比)
+    q_int_W: 界面熱流束 [W]（既知なら指定、未知なら0で無視）
+    """
     # 内部エネルギー
     U_liq = st.m_liq * liquid.u_J_kg(st.T_liq)
     U_gas = st.m_gas * vapor.u_J_kg(st.T_gas)
 
-    # 現在圧力（Psat(T_liq)）
+    # 圧力と液用流量
     P = liquid.Psat_Pa(st.T_liq)
-
-    # 吐出流量（液相のみ）
     m_dot_out_l = choked_mass_flow(P, st.T_liq, cfg)
 
-    # 吐出後の液の暫定状態（蒸発前）
-    m_liq_minus = max(st.m_liq - m_dot_out_l * dt, 1e-9)
-    U_liq_minus = U_liq - m_dot_out_l * liquid.h_J_kg(st.T_liq) * dt
+    # 排出（蒸発前）
+    dm_out = m_dot_out_l * dt
+    dm_out = min(dm_out, st.m_liq * 0.5)  # セーフティ
+    m_liq_minus = max(st.m_liq - dm_out, 1e-9)
+    U_liq_minus = U_liq - dm_out * liquid.h_J_kg(st.T_liq)
 
-    # 非線形方程式で蒸発量と界面温度を解く（省略可、ここでは簡易版）
-    rho_g_sat = vapor.rho_kg_m3(st.T_liq)
-    V_gas = ullage_volume(cfg, st, liquid)
-    m_g_required = rho_g_sat * V_gas
-    dm_evap = (m_g_required - st.m_gas)  # 必要ガス質量との差分
-    dm_evap = np.clip(dm_evap, -0.01*st.m_liq, 0.01*st.m_liq)  # 安定化
+    # 暫定液体体積比（旧Tで概算）
+    V_liq_tmp = m_liq_minus / max(liquid.rho_kg_m3(st.T_liq), 1e-9)
+    V_liq_frac_tmp = V_liq_tmp / cfg.V_tank
+
+    # ヒステリシス判定
+    suppress_evap = V_liq_frac_tmp <= Vliq_hysteresis[0]
+    gas_mode = V_liq_frac_tmp <= Vliq_hysteresis[1]
 
     # 潜熱
-    L = vapor.h_J_kg(st.T_liq) - liquid.h_J_kg(st.T_liq)
+    L_curr = vapor.h_J_kg(st.T_liq) - liquid.h_J_kg(st.T_liq)
 
-    # 質量更新
-    m_liq_new = max(m_liq_minus - dm_evap, 1e-9)
-    m_gas_new = max(st.m_gas + dm_evap, 1e-9)
+    # 蒸発上限（物理＋数値）
+    dm_evap_max_clip = clip_frac * m_liq_minus
+    dm_evap_max_flux = (q_int_W / max(L_curr, 1e-6)) * dt if q_int_W > 0.0 else dm_evap_max_clip
+    dm_evap_cap = min(dm_evap_max_clip, dm_evap_max_flux)
 
-    # エネルギー更新
-    U_liq_new = U_liq_minus - dm_evap * L
-    U_gas_new = U_gas + dm_evap * L  # ガスは排出されないので吐出項なし
+    if gas_mode:
+        # ガス単相モード：蒸発を止め、圧力はPsatではなくガスEoSで更新すべきだが、
+        # ここでは簡易に蒸発ゼロで更新（液がほぼ消失）
+        dm_evap_relaxed = 0.0
+    else:
+        # 飽和要件から必要ガス質量を、"新しい質量"で一貫再計算するためにT_intを仮置き
+        T_int_guess = st.T_liq
+        rho_l_guess = liquid.rho_kg_m3(T_int_guess)
+        rho_g_guess = vapor.rho_kg_m3(T_int_guess)
+        V_liq_new_guess = m_liq_minus / max(rho_l_guess, 1e-9)
+        V_gas_new_guess = max(cfg.V_tank - V_liq_new_guess, 1e-9)
+        m_g_required = rho_g_guess * V_gas_new_guess
 
-    # 温度逆写像
+        dm_evap_needed = m_g_required - st.m_gas
+        if suppress_evap:
+            # 抑制域では過補正を避けるためさらに緩和
+            alpha_use = 0.5 * alpha_evap
+        else:
+            alpha_use = alpha_evap
+
+        dm_evap_relaxed = np.clip(alpha_use * dm_evap_needed, -dm_evap_cap, dm_evap_cap)
+
+    # 新質量
+    m_liq_new = max(m_liq_minus - dm_evap_relaxed, 1e-9)
+    m_gas_new = max(st.m_gas + dm_evap_relaxed, 1e-9)
+
+    # 新しい界面温度を内部エネルギーで決定（潜熱のみ移動）
+    U_liq_new = U_liq_minus - dm_evap_relaxed * L_curr
+    U_gas_new = U_gas + dm_evap_relaxed * L_curr
+
+    # 逆写像で新温度
     T_liq_new = invert_u_to_T(liquid, U_liq_new / m_liq_new, T_guess=st.T_liq)
     T_gas_new = invert_u_to_T(vapor, U_gas_new / m_gas_new, T_guess=st.T_gas)
+
+    # 飽和投影（穏やかに近づける）
+    rho_l = liquid.rho_kg_m3(T_liq_new)
+    rho_g = vapor.rho_kg_m3(T_liq_new)
+    V_liq_new = m_liq_new / max(rho_l, 1e-9)
+    V_gas_new = max(cfg.V_tank - V_liq_new, 1e-9)
+    m_g_required_fin = rho_g * V_gas_new
+    delta_m = m_g_required_fin - m_gas_new
+
+    # 過補正防止の緩和
+    m_liq_new = max(m_liq_new - alpha_sat * delta_m, 1e-9)
+    m_gas_new = max(m_gas_new + alpha_sat * delta_m, 1e-9)
+
+    # エネルギーも対応
+    U_liq_new = U_liq_new - alpha_sat * delta_m * L_curr
+    U_gas_new = U_gas_new + alpha_sat * delta_m * L_curr
+
+    # 最終温度
+    T_liq_new = invert_u_to_T(liquid, U_liq_new / m_liq_new, T_guess=T_liq_new)
+    T_gas_new = invert_u_to_T(vapor, U_gas_new / m_gas_new, T_guess=T_gas_new)
+
+    # 圧力更新
+    P_new = liquid.Psat_Pa(T_liq_new)
 
     # 状態更新
     st.m_liq, st.m_gas = m_liq_new, m_gas_new
     st.T_liq, st.T_gas = T_liq_new, T_gas_new
 
-    return st, P, m_dot_out_l, V_gas
+    return st, P_new, m_dot_out_l, V_gas_new
 
 # ----------------------------
 # 初期条件設定関数
@@ -217,7 +276,7 @@ if __name__ == "__main__":
     vapor = load_phase_csv(vapor_csv, is_liquid=False)
 
     # ユーザ指定パラメータ
-    V_tank = 0.002      # タンク容積 [m3]
+    V_tank = 0.00044      # タンク容積 [m3]
     P_init = 4.2e6        # 初期内圧 [Pa]
 
     # 初期液温度を飽和圧から逆算
@@ -229,8 +288,8 @@ if __name__ == "__main__":
     # タンク設定
     cfg = TankConfig(
         V_tank=V_tank,
-        A_orifice=np.pi/4 * (0.004**2),  # オリフィス径4mm相当
-        Cd=0.34,
+        A_orifice=np.pi/4 * (0.003**2),  # オリフィス径4mm相当
+        Cd=0.333,
         T_wall=273,
         P_down=2e6,                      # 下流圧 [Pa]
         R_g=R_univ / M_N2O,
@@ -248,7 +307,7 @@ if __name__ == "__main__":
 
     # 時間発展パラメータ
     dt = 0.001
-    t_end = 100.0
+    t_end = 10.0
     t = 0.0
 
     # ログ
@@ -272,12 +331,13 @@ if __name__ == "__main__":
         if int(t/dt) % int(0.1/dt) == 0:
             print(f"t={t:.2f}s, P={P/1e5:.2f} bar, T_liq={st.T_liq:.2f} K, "
                   f"T_gas={st.T_gas:.2f} K, m_liq={st.m_liq:.3f} kg, "
-                  f"m_gas={st.m_gas:.3f} kg, gas_frac={gas_fraction*100:.1f}%"
+                  f"m_gas={st.m_gas:.3f} kg, gas_frac={gas_fraction*100:.1f}%,"
                   f"m_dot={m_dot_out:.3f} kg/s")
 
         # 気相が99%以上になったら停止
         if gas_fraction >= 0.99:
             print(">>> no liquid")
+            print(f"end time{t:.3f} s, end pressure{np.min(P)/1e6:.3f} MPa")
             break
 
 

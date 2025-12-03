@@ -38,7 +38,8 @@ Lf = 0.4  # 燃料長さ[m]（とりあえず出力）
 
 # 性能値
 eta_cstar = 0.80
-eta_nozzle = (1 + math.cos(math.pi / 12)) / 2
+# eta_nozzle = (1 + math.cos(math.pi / 12)) / 2
+eta_nozzle = 1
 eta = eta_cstar * eta_nozzle
 F_req = F_req * eta
 
@@ -52,7 +53,7 @@ Pc_def = 2.0  # 初期燃焼室圧 [MPa](初期状態の収束計算において
 OF_def = 6.5  # 仮OF [-]
 # 酸化剤流量に対してK*（discharge coef * crosssectional area orifice）が定まる
 
-epsilon_start = 10  # 仮開口比 [-]
+epsilon_start = 3.16  # 仮開口比 [-]
 epsilon_new = epsilon_start
 
 # 質量流量

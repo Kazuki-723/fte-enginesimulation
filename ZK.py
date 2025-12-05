@@ -112,12 +112,11 @@ def load_phase_csv(path: str, is_liquid: bool) -> PhaseTable:
 # ----------------------------
 # Peng–Robinson EOS utilities for N2O
 # ----------------------------
-R_univ = 8.314462618  # J/mol/K
 
 # N2O constants
 Tc_N2O = 309.57       # K
-Pc_N2O = 7.245e6      # Pa
-omega_N2O = 0.274     # acentric factor
+Pc_N2O = 7.238e6      # Pa
+omega_N2O = 0.142     # acentric factor
 
 def PR_params_N2O(T: float):
     # PR parameters (a, b, alpha) for N2O at temperature T
@@ -221,6 +220,20 @@ def mass_flow_orifice_gas_PR(P_tank: float, T_gas: float, cfg: TankConfig) -> fl
     dP = max(P_tank - cfg.P_down_gas, 0.0)
     return cfg.Cd * cfg.A_orifice * np.sqrt(2.0 * rho_g * dP)
 
+def blended_pressure(T_liq, T_gas, m_gas, V_gas, Vliq_frac, liquid, cfg):
+    P_sat = liquid.Psat_Pa(T_liq)
+    P_pr  = PR_pressure_from_state(m_gas, T_gas, V_gas)
+    # ブレンド開始・終了閾値
+    f_start, f_end = 0.03, 0.01  # 液体体積比
+    if Vliq_frac > f_start:
+        return P_sat
+    elif Vliq_frac < f_end:
+        return P_pr
+    else:
+        # 線形補間
+        w = (f_start - Vliq_frac) / (f_start - f_end)
+        return (1-w)*P_sat + w*P_pr
+
 # 内部エネルギーから温度を逆算する関数
 def invert_u_to_T(table: PhaseTable, u_target: float, T_guess: float = 290.0):
     f = lambda T: table.u_J_kg(T) - u_target
@@ -229,67 +242,69 @@ def invert_u_to_T(table: PhaseTable, u_target: float, T_guess: float = 290.0):
 
 def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: PhaseTable,
          alpha_evap: float = 0.3, alpha_sat: float = 0.5, clip_frac: float = 0.01,
-         Vliq_hysteresis: tuple = (0.03, 0.01), q_int_W: float = 0.0, k_flash: float = 1.0):
+         Vliq_hysteresis: tuple = (0.03, 0.01), q_int_W: float = 0.0,
+         h_int: float = 200.0, A_int: float = 0.01, beta_mix: float = 0.2, k_flash: float = 1.0):
     """
-    Switches to gas-only discharge and PR EOS when gas volume fraction >= 99%.
+    h_int: 界面伝熱係数 [W/m2/K]
+    A_int: 界面面積 [m2]
+    beta_mix: ガス温度の界面整合リラクゼーション係数 (0<β≤1)
     """
-    # Internal energies
-    U_liq = st.m_liq * liquid.u_J_kg(st.T_liq)
-    U_gas = st.m_gas * vapor.u_J_kg(st.T_gas)
 
-    # Geometries with current temperatures
+    # 現在の体積比
     rho_l_curr = liquid.rho_kg_m3(st.T_liq)
     V_liq_curr = st.m_liq / max(rho_l_curr, 1e-12)
     V_gas_curr = max(cfg.V_tank - V_liq_curr, 1e-12)
-    gas_frac_vol = V_gas_curr / cfg.V_tank
+    Vliq_frac = V_liq_curr / cfg.V_tank
+    gas_mode = V_gas_curr / cfg.V_tank >= 0.99
 
-    # Mode decision
-    gas_mode = gas_frac_vol >= 0.99
+    # 内部エネルギー
+    U_liq = st.m_liq * liquid.u_J_kg(st.T_liq)
+    U_gas = st.m_gas * vapor.u_J_kg(st.T_gas)
 
     if not gas_mode:
-        # -------------- LIQUID-ONLY MODE --------------
-        # Pressure and liquid outflow
+        # ---------- 液相排出モード ----------
         P = liquid.Psat_Pa(st.T_liq)
         m_dot_out_l = mass_flow_orifice_liquid(P, st.T_liq, cfg, liquid, k_flash=k_flash)
 
-        # Apply discharge before evaporation
         dm_out = min(m_dot_out_l * dt, st.m_liq * 0.5)
         m_liq_minus = max(st.m_liq - dm_out, 1e-9)
         U_liq_minus = U_liq - dm_out * liquid.h_J_kg(st.T_liq)
 
-        # Provisional volumes
+        # 蒸発の緩和
         rho_l_guess = liquid.rho_kg_m3(st.T_liq)
         V_liq_guess = m_liq_minus / max(rho_l_guess, 1e-12)
         V_gas_guess = max(cfg.V_tank - V_liq_guess, 1e-12)
-        Vliq_frac = V_liq_guess / cfg.V_tank
+        suppress_evap = (V_liq_guess / cfg.V_tank) <= Vliq_hysteresis[0]
 
-        suppress_evap = Vliq_frac <= Vliq_hysteresis[0]
-
-        # Latent heat at current T
         L_curr = vapor.h_J_kg(st.T_liq) - liquid.h_J_kg(st.T_liq)
-
-        # Evap cap
         dm_evap_cap = clip_frac * m_liq_minus
-        # Required gas mass to fill ullage at saturation (use T_liq as interface T)
         rho_g_sat = vapor.rho_kg_m3(st.T_liq)
         m_g_req = rho_g_sat * V_gas_guess
         dm_need = m_g_req - st.m_gas
         alpha_use = 0.5 * alpha_evap if suppress_evap else alpha_evap
         dm_evap_relaxed = np.clip(alpha_use * dm_need, -dm_evap_cap, dm_evap_cap)
 
-        # Update masses
+        # 質量
         m_liq_new = max(m_liq_minus - dm_evap_relaxed, 1e-9)
         m_gas_new = max(st.m_gas + dm_evap_relaxed, 1e-9)
 
-        # Energy transfer (latent heat only)
+        # 潜熱のやり取り
         U_liq_new = U_liq_minus - dm_evap_relaxed * L_curr
         U_gas_new = U_gas + dm_evap_relaxed * L_curr
 
-        # Invert to temperature
+        # 温度逆写像（一次）
         T_liq_new = invert_u_to_T(liquid, U_liq_new / m_liq_new, T_guess=st.T_liq)
         T_gas_new = invert_u_to_T(vapor, U_gas_new / m_gas_new, T_guess=st.T_gas)
 
-        # Soft saturation projection
+        # 界面の感熱整合（ガス側へ Q_int_g を加え、温度もリラクゼーション）
+        Q_int_g = h_int * A_int * (T_liq_new - T_gas_new)
+        U_gas_new += Q_int_g * dt
+        # ガス温度の再逆写像
+        T_gas_new = invert_u_to_T(vapor, U_gas_new / m_gas_new, T_guess=T_gas_new)
+        # 温度リラクゼーション（数値安定化）
+        T_gas_new = T_gas_new + beta_mix * (T_liq_new - T_gas_new)
+
+        # 飽和投影の緩和
         rho_l = liquid.rho_kg_m3(T_liq_new)
         rho_g = vapor.rho_kg_m3(T_liq_new)
         V_liq_new = m_liq_new / max(rho_l, 1e-12)
@@ -302,43 +317,44 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
         U_liq_new = U_liq_new - alpha_sat * delta_m * L_curr
         U_gas_new = U_gas_new + alpha_sat * delta_m * L_curr
 
-        # Final temps
+        # 最終温度
         T_liq_new = invert_u_to_T(liquid, U_liq_new / m_liq_new, T_guess=T_liq_new)
         T_gas_new = invert_u_to_T(vapor, U_gas_new / m_gas_new, T_guess=T_gas_new)
+        # 温度リラクゼーション（薄いウリッジでさらに強めても良い）
+        T_gas_new = T_gas_new + beta_mix * (T_liq_new - T_gas_new)
 
-        # Pressure from saturation
-        P_new = liquid.Psat_Pa(T_liq_new)
+        # 圧力（ブレンドで連続化）
+        Vliq_frac_new = V_liq_new / cfg.V_tank
+        P_new = blended_pressure(T_liq_new, T_gas_new, m_gas_new, V_gas_new, Vliq_frac_new, liquid, cfg)
         m_dot_out = m_dot_out_l
 
     else:
-        # -------------- GAS-ONLY MODE + PR EOS --------------
-        # Pressure from PR EOS using current gas state
+        # ---------- 気相排出モード（PR EOS） ----------
+        # PR圧力
         P = PR_pressure_from_state(st.m_gas, st.T_gas, V_gas_curr)
-
-        # Gas outflow using upstream PR density
+        # ガス流量
         m_dot_out_g = mass_flow_orifice_gas_PR(P, st.T_gas, cfg)
 
-        # Apply gas discharge (no evaporation enforced; liquid may be residual)
         dm_out = min(m_dot_out_g * dt, st.m_gas * 0.5)
         m_gas_new = max(st.m_gas - dm_out, 1e-9)
         U_gas_new = U_gas - dm_out * vapor.u_J_kg(st.T_gas)
 
-        # Keep liquid unchanged (optional: small re-equilibration with latent heat can be added)
+        # 液はそのまま（微小なら無視）
         m_liq_new = st.m_liq
         U_liq_new = U_liq
 
-        # Temperatures from energy
+        # 温度
         T_gas_new = invert_u_to_T(vapor, U_gas_new / m_gas_new, T_guess=st.T_gas)
         T_liq_new = invert_u_to_T(liquid, U_liq_new / m_liq_new, T_guess=st.T_liq)
 
-        # New volumes and PR pressure
+        # 体積・PR圧力
         rho_l = liquid.rho_kg_m3(T_liq_new)
         V_liq_new = m_liq_new / max(rho_l, 1e-12)
         V_gas_new = max(cfg.V_tank - V_liq_new, 1e-12)
         P_new = PR_pressure_from_state(m_gas_new, T_gas_new, V_gas_new)
         m_dot_out = m_dot_out_g
 
-    # Update state
+    # 状態更新
     st.m_liq, st.m_gas = m_liq_new, m_gas_new
     st.T_liq, st.T_gas = T_liq_new, T_gas_new
 
@@ -399,7 +415,7 @@ if __name__ == "__main__":
 
     # 時間発展パラメータ
     dt = 0.001
-    t_end = 20.0
+    t_end = 50.0
     t = 0.0
 
     # ログ
@@ -424,7 +440,7 @@ if __name__ == "__main__":
                   f"gas_vol={gas_fraction*100:.1f}%, m_dot={m_dot_out:.4f} kg/s")
 
         # Optional: stop if almost fully gas AND gas mass very low
-        if gas_fraction >= 0.99 and st.m_gas < 1e-5:
+        if gas_fraction >= 0.99 and m_dot_out < 1e-5:
             print(">>> Gas-only phase nearly depleted, stopping.")
             break
 

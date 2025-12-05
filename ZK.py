@@ -185,6 +185,7 @@ class TankConfig:
     R_g: float
     gamma_g: float
     P_down_gas: float
+    C_down: float
 
 @dataclass
 class TankState:
@@ -235,15 +236,15 @@ def blended_pressure(T_liq, T_gas, m_gas, V_gas, Vliq_frac, liquid, cfg):
         return (1-w)*P_sat + w*P_pr
 
 # 内部エネルギーから温度を逆算する関数
-def invert_u_to_T(table: PhaseTable, u_target: float, T_guess: float = 290.0):
+def invert_u_to_T(table: PhaseTable, u_target: float, T_guess: float = 270.0):
     f = lambda T: table.u_J_kg(T) - u_target
     T_sol = fsolve(f, T_guess)
     return float(T_sol[0])
 
 def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: PhaseTable,
-         alpha_evap: float = 0.3, alpha_sat: float = 0.5, clip_frac: float = 0.01,
-         Vliq_hysteresis: tuple = (0.03, 0.01), q_int_W: float = 0.0,
-         h_int: float = 200.0, A_int: float = 0.01, beta_mix: float = 0.2, k_flash: float = 1.0):
+         alpha_evap: float, alpha_sat: float, clip_frac: float,
+         Vliq_hysteresis: tuple, k_flash: float, q_int_W: float = 0.0,
+         h_int: float = 200.0, A_int: float = 0.01, beta_mix: float = 0.2):
     """
     h_int: 界面伝熱係数 [W/m2/K]
     A_int: 界面面積 [m2]
@@ -264,6 +265,7 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
     if not gas_mode:
         # ---------- 液相排出モード ----------
         P = liquid.Psat_Pa(st.T_liq)
+        cfg.P_down = C_down * np.sqrt(P)
         m_dot_out_l = mass_flow_orifice_liquid(P, st.T_liq, cfg, liquid, k_flash=k_flash)
 
         dm_out = min(m_dot_out_l * dt, st.m_liq * 0.5)
@@ -277,6 +279,8 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
         suppress_evap = (V_liq_guess / cfg.V_tank) <= Vliq_hysteresis[0]
 
         L_curr = vapor.h_J_kg(st.T_liq) - liquid.h_J_kg(st.T_liq)
+        #L_curr = 16.1 * 1000 / M_N2O
+        #print(L_curr)
         dm_evap_cap = clip_frac * m_liq_minus
         rho_g_sat = vapor.rho_kg_m3(st.T_liq)
         m_g_req = rho_g_sat * V_gas_guess
@@ -320,10 +324,10 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
         # 最終温度
         T_liq_new = invert_u_to_T(liquid, U_liq_new / m_liq_new, T_guess=T_liq_new)
         T_gas_new = invert_u_to_T(vapor, U_gas_new / m_gas_new, T_guess=T_gas_new)
-        # 温度リラクゼーション（薄いウリッジでさらに強めても良い）
+        # 温度リラクゼーション
         T_gas_new = T_gas_new + beta_mix * (T_liq_new - T_gas_new)
 
-        # 圧力（ブレンドで連続化）
+        # 圧力
         Vliq_frac_new = V_liq_new / cfg.V_tank
         P_new = blended_pressure(T_liq_new, T_gas_new, m_gas_new, V_gas_new, Vliq_frac_new, liquid, cfg)
         m_dot_out = m_dot_out_l
@@ -363,7 +367,7 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
 # ----------------------------
 # 初期条件設定関数
 # ----------------------------
-def find_T_for_pressure(liquid: PhaseTable, P_target: float, T_guess: float = 290.0):
+def find_T_for_pressure(liquid: PhaseTable, P_target: float, T_guess: float = 280.0):
     """
     飽和圧 Psat(T) = P_target となる温度を数値的に探索
     """
@@ -385,12 +389,14 @@ if __name__ == "__main__":
     # ユーザ指定パラメータ
     V_tank = 0.002      # タンク容積 [m3]
     P_init = 4.2e6        # 初期内圧 [Pa]
+    P_down_init = 2e6     # 初期燃焼室圧[Pa]
+    C_down = P_down_init / np.sqrt(P_init)
 
     # 初期液温度を飽和圧から逆算
     T_init = find_T_for_pressure(liquid, P_init, T_guess=290.0)
 
-    V_liq = 0.99 * V_tank
-    V_gas = 0.01 * V_tank
+    V_liq = 0.999 * V_tank
+    V_gas = 0.001 * V_tank
 
     # タンク設定
     cfg = TankConfig(
@@ -398,10 +404,11 @@ if __name__ == "__main__":
         A_orifice=np.pi/4 * (0.004**2),  # オリフィス径4mm相当
         Cd=0.333,
         T_wall=273,
-        P_down=2e6,                      # 下流圧 [Pa]
+        P_down=P_down_init,                      # 下流圧 [Pa]
         R_g=R_univ / M_N2O,
         gamma_g=1.25,
-        P_down_gas=1e5                   # 燃焼終了後下流圧を大気圧
+        P_down_gas=1e5,                   # 燃焼終了後下流圧を大気圧
+        C_down = C_down
     )
 
     # 初期状態：液相100%充填
@@ -423,8 +430,8 @@ if __name__ == "__main__":
 
     while t < t_end:
         st, P, m_dot_out, V_gas = step(cfg, st, dt, liquid, vapor,
-                                       alpha_evap=0.3, alpha_sat=0.5, clip_frac=0.01,
-                                       Vliq_hysteresis=(0.03, 0.01), k_flash=1.0)
+                                       alpha_evap=0.2, alpha_sat=0.5, clip_frac=0.01,
+                                       Vliq_hysteresis=(0.03, 0.01), k_flash=0.9)
 
         t += dt
         log_t.append(t); log_P.append(P)
@@ -434,7 +441,7 @@ if __name__ == "__main__":
 
         gas_fraction = V_gas / V_tank
         mode = "GAS" if gas_fraction >= 0.99 else "LIQ"
-        if int(t/dt) % int(0.1/dt) == 0:
+        if int(t/dt) % int(0.05/dt) == 0:
             print(f"[{mode}] t={t:.2f}s, P={P/1e5:.2f} bar, T_liq={st.T_liq:.2f} K, "
                   f"T_gas={st.T_gas:.2f} K, m_liq={st.m_liq:.4f} kg, m_gas={st.m_gas:.4f} kg, "
                   f"gas_vol={gas_fraction*100:.1f}%, m_dot={m_dot_out:.4f} kg/s")

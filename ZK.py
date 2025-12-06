@@ -30,6 +30,7 @@ class PhaseTable:
     viscosity_uPa_s: np.ndarray
     k_W_mK: np.ndarray
     surf_tension_N_m: np.ndarray = None
+    muJT_K_per_MPa: np.ndarray = None
 
     # スプライン補間器
     f_P_MPa: CubicSpline = None
@@ -40,6 +41,7 @@ class PhaseTable:
     f_visc_uPa_s: CubicSpline = None
     f_k_W_mK: CubicSpline = None
     f_sigma: CubicSpline = None
+    f_muJT: CubicSpline = None
 
     def build(self, is_liquid: bool):
         self.f_P_MPa = CubicSpline(self.T, self.P_MPa, bc_type="natural")
@@ -51,6 +53,9 @@ class PhaseTable:
         self.f_k_W_mK = CubicSpline(self.T, self.k_W_mK, bc_type="natural")
         if is_liquid and self.surf_tension_N_m is not None:
             self.f_sigma = CubicSpline(self.T, self.surf_tension_N_m, bc_type="natural")
+        if self.muJT_K_per_MPa is not None:
+            self.f_muJT = CubicSpline(self.T, self.muJT_K_per_MPa, bc_type="natural")
+
 
     def _clip(self, Tq):
         return np.clip(Tq, self.T[0], self.T[-1])
@@ -80,11 +85,17 @@ class PhaseTable:
         if self.f_sigma is None:
             return None
         return float(self.f_sigma(self._clip(Tq)))
+    
+    def muJT_K_per_MPa_at(self, Tq):
+        if self.f_muJT is None:
+            return 0.0
+        return float(self.f_muJT(self._clip(Tq)))
 
 def load_phase_csv(path: str, is_liquid: bool) -> PhaseTable:
     T, P_MPa, rho = [], [], []
     u_kJ_mol, h_kJ_mol, cp_J_molK = [], [], []
     visc_uPa_s, k_W_mK, sigma_N_m = [], [], []
+    muJT_K_MPa = []
 
     with open(path, newline='', encoding='utf-8') as f:
         reader = csv.DictReader(f)
@@ -99,13 +110,18 @@ def load_phase_csv(path: str, is_liquid: bool) -> PhaseTable:
             k_W_mK.append(float(row["Therm. Cond. (W/m*K)"]))
             if is_liquid and "Surf. Tension (N/m)" in row:
                 sigma_N_m.append(float(row["Surf. Tension (N/m)"]))
+            if "Joule-Thomson (K/MPa)" in row and row["Joule-Thomson (K/MPa)"] != "":
+                muJT_K_MPa.append(float(row["Joule-Thomson (K/MPa)"]))
+            else:
+                muJT_K_MPa.append(0.0)
 
     table = PhaseTable(
         T=np.array(T), P_MPa=np.array(P_MPa), rho=np.array(rho),
         u_kJ_per_mol=np.array(u_kJ_mol), h_kJ_per_mol=np.array(h_kJ_mol),
         cp_J_per_molK=np.array(cp_J_molK), viscosity_uPa_s=np.array(visc_uPa_s),
         k_W_mK=np.array(k_W_mK),
-        surf_tension_N_m=(np.array(sigma_N_m) if sigma_N_m else None)
+        surf_tension_N_m=(np.array(sigma_N_m) if sigma_N_m else None),
+        muJT_K_per_MPa=np.array(muJT_K_MPa)
     )
     table.build(is_liquid=is_liquid)
     return table
@@ -201,6 +217,21 @@ def ullage_volume(cfg: TankConfig, st: TankState, liquid: PhaseTable):
 def tank_pressure(st: TankState, liquid: PhaseTable):
     return liquid.Psat_Pa(st.T_liq)
 
+# -------------------------------
+# Joule-Thomson Cooling effect
+# -------------------------------
+
+def apply_joule_thomson_cooling(vapor: PhaseTable, T_gas: float, P_old: float, P_new: float):
+    """
+    μJT(T) [K/MPa] を用い、ΔT_JT = μJT(T_avg) * ΔP(MPa) を適用。
+    圧力低下（ΔP<0）で T が低下（μJT>0の場合）。
+    """
+    T_avg = 0.5 * T_gas  # 近似: 現在温度の半分…ではなく現在値そのものを使う
+    T_avg = T_gas
+    muJT = vapor.muJT_K_per_MPa_at(T_avg)
+    dP_MPa = (P_new - P_old) / 1e6
+    return T_gas + muJT * dP_MPa
+
 # ----------------------------
 # Orifice mass flow models
 # ----------------------------
@@ -278,8 +309,8 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
         V_gas_guess = max(cfg.V_tank - V_liq_guess, 1e-12)
         suppress_evap = (V_liq_guess / cfg.V_tank) <= Vliq_hysteresis[0]
 
-        L_curr = vapor.h_J_kg(st.T_liq) - liquid.h_J_kg(st.T_liq)
-        #L_curr = 16.1 * 1000 / M_N2O
+        #L_curr = vapor.h_J_kg(st.T_liq) - liquid.h_J_kg(st.T_liq)
+        L_curr = 16.1 * 1000 / M_N2O
         #print(L_curr)
         dm_evap_cap = clip_frac * m_liq_minus
         rho_g_sat = vapor.rho_kg_m3(st.T_liq)
@@ -426,7 +457,7 @@ if __name__ == "__main__":
     t = 0.0
 
     # ログ
-    log_t, log_P, log_Tl, log_Tg, log_mL, log_mG, log_mout = [], [], [], [], [], [], []
+    log_t, log_P, log_P_down, log_Tl, log_Tg, log_mL, log_mG, log_mout = [], [], [], [], [], [], [], []
 
     while t < t_end:
         st, P, m_dot_out, V_gas = step(cfg, st, dt, liquid, vapor,
@@ -434,7 +465,7 @@ if __name__ == "__main__":
                                        Vliq_hysteresis=(0.03, 0.01), k_flash=0.9)
 
         t += dt
-        log_t.append(t); log_P.append(P)
+        log_t.append(t); log_P.append(P); log_P_down.append(cfg.P_down)
         log_Tl.append(st.T_liq); log_Tg.append(st.T_gas)
         log_mL.append(st.m_liq); log_mG.append(st.m_gas)
         log_mout.append(m_dot_out)
@@ -456,6 +487,7 @@ if __name__ == "__main__":
     fig, axs = plt.subplots(1, 2, figsize=(8, 10))
 
     axs[0].plot(log_t, np.array(log_P)/1e5)
+    axs[0].plot(log_t, np.array(log_P_down)/1e5)
     axs[0].set_ylabel("Tank Pressure [bar]")
 
     axs[1].plot(log_t, log_Tl, label="Liquid T")

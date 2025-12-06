@@ -256,7 +256,7 @@ def blended_pressure(T_liq, T_gas, m_gas, V_gas, Vliq_frac, liquid, cfg):
     P_sat = liquid.Psat_Pa(T_liq)
     P_pr  = PR_pressure_from_state(m_gas, T_gas, V_gas)
     # ブレンド開始・終了閾値
-    f_start, f_end = 0.03, 0.01  # 液体体積比
+    f_start, f_end = 0.1, 0.01  # 液体体積比
     if Vliq_frac > f_start:
         return P_sat
     elif Vliq_frac < f_end:
@@ -267,7 +267,7 @@ def blended_pressure(T_liq, T_gas, m_gas, V_gas, Vliq_frac, liquid, cfg):
         return (1-w)*P_sat + w*P_pr
 
 # 内部エネルギーから温度を逆算する関数
-def invert_u_to_T(table: PhaseTable, u_target: float, T_guess: float = 270.0):
+def invert_u_to_T(table: PhaseTable, u_target: float, T_guess: float):
     f = lambda T: table.u_J_kg(T) - u_target
     T_sol = fsolve(f, T_guess)
     return float(T_sol[0])
@@ -293,6 +293,9 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
     U_liq = st.m_liq * liquid.u_J_kg(st.T_liq)
     U_gas = st.m_gas * vapor.u_J_kg(st.T_gas)
 
+    # debug:liquid only simulation
+    #gas_mode = False
+
     if not gas_mode:
         # ---------- 液相排出モード ----------
         P = liquid.Psat_Pa(st.T_liq)
@@ -309,8 +312,9 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
         V_gas_guess = max(cfg.V_tank - V_liq_guess, 1e-12)
         suppress_evap = (V_liq_guess / cfg.V_tank) <= Vliq_hysteresis[0]
 
-        #L_curr = vapor.h_J_kg(st.T_liq) - liquid.h_J_kg(st.T_liq)
-        L_curr = 16.1 * 1000 / M_N2O
+        L_curr = vapor.h_J_kg(st.T_liq) - liquid.h_J_kg(st.T_liq)
+        #L_curr = 16.1 * 1000 / M_N2O
+        #L_curr = (18.535262 - st.T_liq * 0.011019) * 1000 / M_N2O
         #print(L_curr)
         dm_evap_cap = clip_frac * m_liq_minus
         rho_g_sat = vapor.rho_kg_m3(st.T_liq)
@@ -424,7 +428,7 @@ if __name__ == "__main__":
     C_down = P_down_init / np.sqrt(P_init)
 
     # 初期液温度を飽和圧から逆算
-    T_init = find_T_for_pressure(liquid, P_init, T_guess=290.0)
+    T_init = find_T_for_pressure(liquid, P_init, T_guess=280.0)
 
     V_liq = 0.999 * V_tank
     V_gas = 0.001 * V_tank
@@ -465,12 +469,16 @@ if __name__ == "__main__":
                                        Vliq_hysteresis=(0.03, 0.01), k_flash=0.9)
 
         t += dt
-        log_t.append(t); log_P.append(P); log_P_down.append(cfg.P_down)
+        gas_fraction = V_gas / V_tank
+        log_t.append(t); log_P.append(P)
         log_Tl.append(st.T_liq); log_Tg.append(st.T_gas)
         log_mL.append(st.m_liq); log_mG.append(st.m_gas)
         log_mout.append(m_dot_out)
+        if gas_fraction >= 0.99:
+            log_P_down.append(cfg.P_down_gas)
+        else:
+            log_P_down.append(cfg.P_down)
 
-        gas_fraction = V_gas / V_tank
         mode = "GAS" if gas_fraction >= 0.99 else "LIQ"
         if int(t/dt) % int(0.05/dt) == 0:
             print(f"[{mode}] t={t:.2f}s, P={P/1e5:.2f} bar, T_liq={st.T_liq:.2f} K, "
@@ -489,6 +497,7 @@ if __name__ == "__main__":
     axs[0].plot(log_t, np.array(log_P)/1e5)
     axs[0].plot(log_t, np.array(log_P_down)/1e5)
     axs[0].set_ylabel("Tank Pressure [bar]")
+    axs[0].set_ylim(0, 50)
 
     axs[1].plot(log_t, log_Tl, label="Liquid T")
     axs[1].plot(log_t, log_Tg, label="Gas T")

@@ -272,9 +272,14 @@ def invert_u_to_T(table: PhaseTable, u_target: float, T_guess: float):
     T_sol = fsolve(f, T_guess)
     return float(T_sol[0])
 
+def energy_init(cfg: TankConfig, st: TankState):
+    U_liq = st.m_liq * liquid.u_J_kg(st.T_liq)
+    U_gas = st.m_gas * vapor.u_J_kg(st.T_gas)
+    return U_liq + U_gas
+
 def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: PhaseTable,
          alpha_evap: float, alpha_sat: float, clip_frac: float,
-         Vliq_hysteresis: tuple, k_flash: float, time: float, q_int_W: float = 0.0,
+         Vliq_hysteresis: tuple, k_flash: float, time: float, u_total: float, q_int_W: float = 0.0,
          h_int: float = 200.0, A_int: float = 0.003848, beta_mix: float = 0.4):
     """
     h_int: 界面伝熱係数 [W/m2/K]
@@ -289,8 +294,9 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
     gas_mode = V_gas_curr / cfg.V_tank >= 0.99
 
     # 内部エネルギー
-    U_liq = st.m_liq * liquid.u_J_kg(st.T_liq)
+    #U_liq = st.m_liq * liquid.u_J_kg(st.T_liq)
     U_gas = st.m_gas * vapor.u_J_kg(st.T_gas)
+    U_liq = u_total - U_gas
 
     if not gas_mode:
         # ---------- 液相排出モード ----------
@@ -335,6 +341,7 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
 
         # 界面の感熱整合（ガス側へ Q_int_g を加え、温度もリラクゼーション）
         Q_int_g = h_int * A_int * (T_liq_new - T_gas_new)
+        U_liq_new -= Q_int_g * dt
         U_gas_new += Q_int_g * dt
         # ガス温度の再逆写像
         T_gas_new = invert_u_to_T(vapor, U_gas_new / m_gas_new, T_guess=T_gas_new)
@@ -405,6 +412,7 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
     # 状態更新
     st.m_liq, st.m_gas = m_liq_new, m_gas_new
     st.T_liq, st.T_gas = T_liq_new, T_gas_new
+    u_total -= U_out
     properties ={'U_liq': U_liq_new, 
                  'U_gas': U_gas_new, 
                  'U_out': U_out,
@@ -412,7 +420,7 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
                  'rho_gas': vapor.rho_kg_m3(T_gas_new),
                  'Latent_Heat': Latent_heat
                 }
-    return st, P_new, m_dot_out, V_gas_new, properties
+    return st, P_new, m_dot_out, V_gas_new, properties, u_total
 
 # ----------------------------
 # 初期条件設定関数
@@ -482,9 +490,10 @@ if __name__ == "__main__":
     latent_heat_tot = 0
     log_u_out_tot, log_latent_heat_tot, log_u_tot = [], [], []
 
+    u_total = energy_init(cfg, st)
     while t < t_end:
-        st, P, m_dot_out, V_gas, properties = step(cfg, st, dt, liquid, vapor,
-                                       alpha_evap=0.2, alpha_sat=0.5, clip_frac=0.01,
+        st, P, m_dot_out, V_gas, properties, u_total = step(cfg, st, dt, liquid, vapor,
+                                       alpha_evap=0.2, alpha_sat=0.5, clip_frac=0.01, u_total = u_total,
                                        Vliq_hysteresis=(0.05, 0.01), k_flash=1,time = t)
 
         t += dt
@@ -560,8 +569,18 @@ if __name__ == "__main__":
     plt.xlabel("Time [s]")
     plt.ylabel("Internal Energy [J]")
     plt.title("Internal Energy Over Time")
-    #plt.ylim(0,1000)
+    #plt.ylim(65000,75000)
 
     plt.legend()
     plt.tight_layout()
     plt.show()
+
+    # plt.figure(figsize=(10, 5))
+    # plt.plot(log_t, log_latent_heat_tot, label="latent heat")
+    # plt.xlabel("Time [s]")
+    # plt.ylabel("Internal Energy [J]")
+    # plt.title("Internal Energy Over Time")
+
+    # plt.legend()
+    # plt.tight_layout()
+    # plt.show()

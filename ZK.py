@@ -16,7 +16,7 @@ def clamp(x, xmin, xmax):
 # ----------------------------
 # 物性テーブル補間クラス
 # ----------------------------
-M_N2O = 44.0128e-3  # kg/mol
+M_N2O = 44.013e-3  # kg/mol
 R_univ = 8.314
 
 @dataclass
@@ -117,7 +117,7 @@ def load_phase_csv(path: str, is_liquid: bool) -> PhaseTable:
 
     table = PhaseTable(
         T=np.array(T), P_MPa=np.array(P_MPa), rho=np.array(rho),
-        u_kJ_per_mol=np.array(u_kJ_mol), h_kJ_per_mol=np.array(h_kJ_mol),
+        u_kJ_per_mol=np.array(u_kJ_mol), h_kJ_per_mol=np.array( h_kJ_mol),
         cp_J_per_molK=np.array(cp_J_molK), viscosity_uPa_s=np.array(visc_uPa_s),
         k_W_mK=np.array(k_W_mK),
         surf_tension_N_m=(np.array(sigma_N_m) if sigma_N_m else None),
@@ -130,13 +130,14 @@ def load_phase_csv(path: str, is_liquid: bool) -> PhaseTable:
 # ----------------------------
 
 # N2O constants
-Tc_N2O = 309.57       # K
-Pc_N2O = 7.238e6      # Pa
-omega_N2O = 0.142     # acentric factor
+# https://ntrs.nasa.gov/api/citations/20190001326/downloads/20190001326.pdf
+Tc_N2O = 309.6       # K
+Pc_N2O = 7.25e6      # Pa
+omega_N2O = 0.160     # acentric factor
+kappa = 0.37464 + 1.54226 * omega_N2O - 0.26992 * omega_N2O**2 # Peng-robinson EoS param.
 
 def PR_params_N2O(T: float):
     # PR parameters (a, b, alpha) for N2O at temperature T
-    kappa = 0.37464 + 1.54226 * omega_N2O - 0.26992 * omega_N2O**2
     Tr = T / Tc_N2O
     alpha = (1 + kappa * (1 - np.sqrt(Tr)))**2
     a = 0.45724 * (R_univ**2 * Tc_N2O**2 / Pc_N2O) * alpha
@@ -226,10 +227,9 @@ def apply_joule_thomson_cooling(vapor: PhaseTable, T_gas: float, P_old: float, P
     μJT(T) [K/MPa] を用い、ΔT_JT = μJT(T_avg) * ΔP(MPa) を適用。
     圧力低下（ΔP<0）で T が低下（μJT>0の場合）。
     """
-    T_avg = 0.5 * T_gas  # 近似: 現在温度の半分…ではなく現在値そのものを使う
     T_avg = T_gas
     muJT = vapor.muJT_K_per_MPa_at(T_avg)
-    dP_MPa = (P_new - P_old) / 1e6
+    dP_MPa = (P_old - P_new) / 1e6
     return T_gas + muJT * dP_MPa
 
 # ----------------------------
@@ -274,8 +274,8 @@ def invert_u_to_T(table: PhaseTable, u_target: float, T_guess: float):
 
 def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: PhaseTable,
          alpha_evap: float, alpha_sat: float, clip_frac: float,
-         Vliq_hysteresis: tuple, k_flash: float, q_int_W: float = 0.0,
-         h_int: float = 200.0, A_int: float = 0.01, beta_mix: float = 0.2):
+         Vliq_hysteresis: tuple, k_flash: float, time: float, q_int_W: float = 0.0,
+         h_int: float = 200.0, A_int: float = 0.003848, beta_mix: float = 0.4):
     """
     h_int: 界面伝熱係数 [W/m2/K]
     A_int: 界面面積 [m2]
@@ -286,18 +286,15 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
     rho_l_curr = liquid.rho_kg_m3(st.T_liq)
     V_liq_curr = st.m_liq / max(rho_l_curr, 1e-12)
     V_gas_curr = max(cfg.V_tank - V_liq_curr, 1e-12)
-    Vliq_frac = V_liq_curr / cfg.V_tank
     gas_mode = V_gas_curr / cfg.V_tank >= 0.99
 
     # 内部エネルギー
     U_liq = st.m_liq * liquid.u_J_kg(st.T_liq)
     U_gas = st.m_gas * vapor.u_J_kg(st.T_gas)
 
-    # debug:liquid only simulation
-    #gas_mode = False
-
     if not gas_mode:
         # ---------- 液相排出モード ----------
+        P_old = liquid.Psat_Pa(st.T_liq)
         P = liquid.Psat_Pa(st.T_liq)
         cfg.P_down = C_down * np.sqrt(P)
         m_dot_out_l = mass_flow_orifice_liquid(P, st.T_liq, cfg, liquid, k_flash=k_flash)
@@ -312,9 +309,9 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
         V_gas_guess = max(cfg.V_tank - V_liq_guess, 1e-12)
         suppress_evap = (V_liq_guess / cfg.V_tank) <= Vliq_hysteresis[0]
 
-        L_curr = vapor.h_J_kg(st.T_liq) - liquid.h_J_kg(st.T_liq)
-        #L_curr = 16.1 * 1000 / M_N2O
         #L_curr = (18.535262 - st.T_liq * 0.011019) * 1000 / M_N2O
+        #L_curr = 16.5 * ((1 - st.T_liq/Tc_N2O) / (1 - 184.7/Tc_N2O)) ** 0.38 * 1000 / M_N2O
+        L_curr = vapor.h_J_kg(st.T_liq) - liquid.h_J_kg(st.T_liq)
         #print(L_curr)
         dm_evap_cap = clip_frac * m_liq_minus
         rho_g_sat = vapor.rho_kg_m3(st.T_liq)
@@ -328,8 +325,9 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
         m_gas_new = max(st.m_gas + dm_evap_relaxed, 1e-9)
 
         # 潜熱のやり取り
-        U_liq_new = U_liq_minus - dm_evap_relaxed * L_curr
-        U_gas_new = U_gas + dm_evap_relaxed * L_curr
+        Latent_heat =  dm_evap_relaxed * L_curr
+        U_liq_new = U_liq_minus - Latent_heat
+        U_gas_new = U_gas + Latent_heat
 
         # 温度逆写像（一次）
         T_liq_new = invert_u_to_T(liquid, U_liq_new / m_liq_new, T_guess=st.T_liq)
@@ -363,9 +361,18 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
         T_gas_new = T_gas_new + beta_mix * (T_liq_new - T_gas_new)
 
         # 圧力
-        Vliq_frac_new = V_liq_new / cfg.V_tank
-        P_new = blended_pressure(T_liq_new, T_gas_new, m_gas_new, V_gas_new, Vliq_frac_new, liquid, cfg)
+        #Vliq_frac_new = V_liq_new / cfg.V_tank
+        #P_new = blended_pressure(T_liq_new, T_gas_new, m_gas_new, V_gas_new, Vliq_frac_new, liquid, cfg)
+        P_new = PR_pressure_from_state(m_gas_new, T_gas_new, V_gas_new)
         m_dot_out = m_dot_out_l
+
+        # μJTによる補正（圧力変化に応じて）
+        T_gas_corr = apply_joule_thomson_cooling(vapor, T_gas_new, P_old, P_new)
+
+        # 内部エネルギーを整合（u(T)へ合わせる）
+        U_gas_new = m_gas_new * vapor.u_J_kg(T_gas_corr)
+        T_gas_new = T_gas_corr
+        U_out = dm_out * liquid.u_J_kg(T_liq_new)
 
     else:
         # ---------- 気相排出モード（PR EOS） ----------
@@ -381,6 +388,7 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
         # 液はそのまま（微小なら無視）
         m_liq_new = st.m_liq
         U_liq_new = U_liq
+        Latent_heat = 0
 
         # 温度
         T_gas_new = invert_u_to_T(vapor, U_gas_new / m_gas_new, T_guess=st.T_gas)
@@ -392,21 +400,27 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
         V_gas_new = max(cfg.V_tank - V_liq_new, 1e-12)
         P_new = PR_pressure_from_state(m_gas_new, T_gas_new, V_gas_new)
         m_dot_out = m_dot_out_g
+        U_out = dm_out * vapor.u_J_kg(T_gas_new)
 
     # 状態更新
     st.m_liq, st.m_gas = m_liq_new, m_gas_new
     st.T_liq, st.T_gas = T_liq_new, T_gas_new
-
-    return st, P_new, m_dot_out, V_gas_new
+    properties ={'U_liq': U_liq_new, 
+                 'U_gas': U_gas_new, 
+                 'U_out': U_out,
+                 'rho_liq': liquid.rho_kg_m3(T_liq_new), 
+                 'rho_gas': vapor.rho_kg_m3(T_gas_new),
+                 'Latent_Heat': Latent_heat
+                }
+    return st, P_new, m_dot_out, V_gas_new, properties
 
 # ----------------------------
 # 初期条件設定関数
 # ----------------------------
-def find_T_for_pressure(liquid: PhaseTable, P_target: float, T_guess: float = 280.0):
+def find_T_for_pressure(liquid: PhaseTable, P_target: float, T_guess: float):
     """
     飽和圧 Psat(T) = P_target となる温度を数値的に探索
     """
-    from scipy.optimize import fsolve
     f = lambda T: liquid.Psat_Pa(T) - P_target
     T_sol = fsolve(f, T_guess)
     return float(T_sol[0])
@@ -422,26 +436,26 @@ if __name__ == "__main__":
     vapor = load_phase_csv(vapor_csv, is_liquid=False)
 
     # ユーザ指定パラメータ
-    V_tank = 0.002      # タンク容積 [m3]
+    V_tank = 0.00044      # タンク容積 [m3]
     P_init = 4.2e6        # 初期内圧 [Pa]
     P_down_init = 2e6     # 初期燃焼室圧[Pa]
     C_down = P_down_init / np.sqrt(P_init)
 
     # 初期液温度を飽和圧から逆算
-    T_init = find_T_for_pressure(liquid, P_init, T_guess=280.0)
+    T_init = find_T_for_pressure(liquid, P_init, T_guess=250.0)
 
-    V_liq = 0.999 * V_tank
-    V_gas = 0.001 * V_tank
+    V_liq = 0.99 * V_tank
+    V_gas = 0.01 * V_tank
 
     # タンク設定
     cfg = TankConfig(
         V_tank=V_tank,
-        A_orifice=np.pi/4 * (0.004**2),  # オリフィス径4mm相当
+        A_orifice=np.pi/4 * (0.003**2),  # オリフィス径4mm相当
         Cd=0.333,
-        T_wall=273,
+        T_wall=200,
         P_down=P_down_init,                      # 下流圧 [Pa]
         R_g=R_univ / M_N2O,
-        gamma_g=1.25,
+        gamma_g=1.30,
         P_down_gas=1e5,                   # 燃焼終了後下流圧を大気圧
         C_down = C_down
     )
@@ -457,16 +471,21 @@ if __name__ == "__main__":
 
     # 時間発展パラメータ
     dt = 0.001
-    t_end = 50.0
+    t_end = 20.0
     t = 0.0
+    i = 0
 
     # ログ
     log_t, log_P, log_P_down, log_Tl, log_Tg, log_mL, log_mG, log_mout = [], [], [], [], [], [], [], []
+    log_u_liq, log_u_gas, log_u_out, log_latent_heat = [], [], [], []
+    u_out_tot = 0
+    latent_heat_tot = 0
+    log_u_out_tot, log_latent_heat_tot, log_u_tot = [], [], []
 
     while t < t_end:
-        st, P, m_dot_out, V_gas = step(cfg, st, dt, liquid, vapor,
+        st, P, m_dot_out, V_gas, properties = step(cfg, st, dt, liquid, vapor,
                                        alpha_evap=0.2, alpha_sat=0.5, clip_frac=0.01,
-                                       Vliq_hysteresis=(0.03, 0.01), k_flash=0.9)
+                                       Vliq_hysteresis=(0.05, 0.01), k_flash=1,time = t)
 
         t += dt
         gas_fraction = V_gas / V_tank
@@ -474,6 +493,11 @@ if __name__ == "__main__":
         log_Tl.append(st.T_liq); log_Tg.append(st.T_gas)
         log_mL.append(st.m_liq); log_mG.append(st.m_gas)
         log_mout.append(m_dot_out)
+        log_u_liq.append(properties["U_liq"]); log_u_gas.append(properties["U_gas"]); log_u_out.append(properties["U_out"]); log_latent_heat.append(properties["Latent_Heat"])
+        u_out_tot += properties["U_out"]
+        latent_heat_tot += properties["Latent_Heat"]
+        log_u_out_tot.append(u_out_tot); log_latent_heat_tot.append(latent_heat_tot)
+        log_u_tot.append(properties["U_liq"] + properties["U_gas"] + u_out_tot)
         if gas_fraction >= 0.99:
             log_P_down.append(cfg.P_down_gas)
         else:
@@ -483,7 +507,14 @@ if __name__ == "__main__":
         if int(t/dt) % int(0.05/dt) == 0:
             print(f"[{mode}] t={t:.2f}s, P={P/1e5:.2f} bar, T_liq={st.T_liq:.2f} K, "
                   f"T_gas={st.T_gas:.2f} K, m_liq={st.m_liq:.4f} kg, m_gas={st.m_gas:.4f} kg, "
+                  f"U_liq={properties["U_liq"]/1e3:.4f} kJ, U_gas={properties["U_gas"]/1e3:.4f} kJ, U_out={properties["U_out"]/1e3:.4f} kJ,"
+                  f"Latent Heat={properties["Latent_Heat"]/1e3:.4f} kJ, "
                   f"gas_vol={gas_fraction*100:.1f}%, m_dot={m_dot_out:.4f} kg/s")
+
+        # liquid only mode
+        # if gas_fraction >= 0.99:
+        #     print(">>> Liquid-only phase nearly depleted.")
+        #     break
 
         # Optional: stop if almost fully gas AND gas mass very low
         if gas_fraction >= 0.99 and m_dot_out < 1e-5:
@@ -517,5 +548,20 @@ if __name__ == "__main__":
     axs[1].legend()
 
     plt.xlabel("Time [s]")
+    plt.tight_layout()
+    plt.show()
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(log_t, log_u_liq, label="liquid")
+    plt.plot(log_t, log_u_gas, label="gas")
+    plt.plot(log_t, log_u_out_tot, label="out")
+    plt.plot(log_t, log_latent_heat_tot, label="latent heat")
+    plt.plot(log_t, log_u_tot, label="total")
+    plt.xlabel("Time [s]")
+    plt.ylabel("Internal Energy [J]")
+    plt.title("Internal Energy Over Time")
+    #plt.ylim(0,1000)
+
+    plt.legend()
     plt.tight_layout()
     plt.show()

@@ -296,7 +296,7 @@ def step(cfg: TankConfig, st: TankState, dt: float, liquid: PhaseTable, vapor: P
     # 内部エネルギー
     #U_liq = st.m_liq * liquid.u_J_kg(st.T_liq)
     U_gas = st.m_gas * vapor.u_J_kg(st.T_gas)
-    U_liq = u_total - U_gas
+    U_liq = min(u_total - U_gas, st.m_liq * liquid.u_J_kg(st.T_liq))
 
     if not gas_mode:
         # ---------- 液相排出モード ----------

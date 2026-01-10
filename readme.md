@@ -99,6 +99,9 @@ Fix
 - 値エラー時に実行ボタンを押した際の挙動の統一
     - ボタンにエラーを出して押せなくする．
 - 有効数字まわり
+-eqn.8の誤植
+-ノズル周りにおける物性値の定義
+
 
 # Reference
 George P Sutton and Oscar Biblarz. Rocket Propulsion Elements. John Wiley & Sons, 9th edition, 2016. ISBN 9781118753910.

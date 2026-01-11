@@ -99,8 +99,9 @@ Fix
 - 値エラー時に実行ボタンを押した際の挙動の統一
     - ボタンにエラーを出して押せなくする．
 - 有効数字まわり
--eqn.8の誤植
--ノズル周りにおける物性値の定義
+- eqn.8の誤植
+- ノズル周りにおける物性値の定義
+- etaの扱いの統一
 
 
 # Reference
@@ -113,3 +114,6 @@ Sanford Gordan and Bonnie J. McBride. Computer program for calculation of comple
 Sanford Gordan and Bonnie J. McBride. Computer program for calculation of complex chemical equilibrium compositions and applications. II. users manual and program description. 1996. NASA-RP-1311. URL: https://ntrs.nasa.gov/citations/19960044559.
 
 Rocket Engines – Introduction to Aerospace Flight Vehicles, https://eaglepubs.erau.edu/introductiontoaerospaceflightvehicles/chapter/rocket-engines/
+
+Karp, Ashley Chandler and Jens, Elizabeth Therese. Hybrid rocket propulsion design handbook, 2024 ISBN 9780128161999.
+https://www.sciencedirect.com/book/monograph/9780128161999/hybrid-rocket-propulsion-design-handbook

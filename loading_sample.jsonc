@@ -1,0 +1,19 @@
+{
+    /*
+    initial condition calclation
+    */
+    "F_req": 650, // 要求推力 [N]
+    "Pc_def": 2.0, //初期燃焼室圧力 [MPa]
+    "OF_def": 6.5, //初期O/F比 [-]
+    "mdot_new": 0.34, // 初期流量 [kg/s]
+    "Df_init": 0.034, // 初期燃料内径 [m]
+    "eta_cstar": 0.8, // Cstar効率 [-]
+    "eta_nozzle": 1.0, // nozzle効率 [-]
+    /*
+    fuel oxidizer material constants
+    */
+    "rho_f": 1190, // 燃料密度 [kg/m^3]
+    "a_ox": 0.000131, // 燃料後退速度定数 [m/s]
+    "n_ox": 0.34, // 燃料後退速度指数 [-]
+    "Pt_init": 4.2 // 初期タンク圧力 [MPa]
+}

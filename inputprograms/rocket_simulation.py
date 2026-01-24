@@ -92,7 +92,7 @@ class RocketSimulation:
             self.a_tmp1 = np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
             self.Ve_tmp1 = self.a_tmp1 * self.Mach_tmp1
             # スロート断面積計算
-            self.At_new = 4 * self.eta_cstar * self.Cstar_tmp1 * self.mdot_new / (math.pi * self.Pc_def * 10 ** 6)
+            self.At_new = self.eta_cstar * self.Cstar_tmp1 * self.mdot_new / (self.Pc_def * 10 ** 6)
             
             # 出口マッハ数
             self.Me_new = np.sqrt(2 * self.R_tmp1 * self.T_c_tmp1 * (self.gamma_tmp1/(self.gamma_tmp1-1)) * (1- (self.Pe_tmp1/self.Pc_def)**((self.gamma_tmp1-1)/self.gamma_tmp1))) / \

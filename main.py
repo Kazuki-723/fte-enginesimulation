@@ -1,4 +1,5 @@
 import re
+import csv
 from inputprograms.rocket_simulation import RocketSimulation
 from inputprograms.interp_density import OxidizerDatabase
 from inputprograms.importjson import JsoncLoader
@@ -34,6 +35,12 @@ def parse_initial_results(text: str) -> dict:
 
     return result
 
+# Ptからrho_oxを計算
+def calc_rho_ox(pressure):
+    ox_calc_result = ox_db.get_density(pressure)
+    rho_ox = float(ox_calc_result.split(":")[-1].replace("kg/m³", "").strip())
+    return rho_ox
+
 # -------------------------
 # 初期条件計算モード
 # -------------------------
@@ -54,8 +61,7 @@ def run_initial_condition_mode():
         print(f"{key} = {val}")
 
     # Ptからrho_oxを計算
-    ox_calc_result = ox_db.get_density(inputvalues["Pt_init"])
-    rho_ox = float(ox_calc_result.split(":")[-1].replace("kg/m³", "").strip())
+    rho_ox = calc_rho_ox(inputvalues["Pt_init"])
 
     # initial_convergence()に投げる部分
     F_req = inputvalues["F_req"]
@@ -77,11 +83,6 @@ def run_initial_condition_mode():
         rho_ox_init, rho_f_start, a_ox, n_ox
     )
 
-    # 結果のパース
-    init_parse_result = parse_initial_results(init_output)
-    print(init_parse_result)
-
-
 # -------------------------
 # 時間発展計算モード（これから作成）
 # -------------------------
@@ -101,10 +102,86 @@ def run_time_evolution_mode():
     for key, val in inputvalues.items():
         print(f"{key} = {val}")
 
-    # ここに時間発展コードを追加していく
-    print("時間発展計算を開始します（まだ未実装）")
-    # TODO: ここに時間発展ロジックを実装
+    # Ptからrho_oxを計算
+    rho_ox = calc_rho_ox(inputvalues["Pt_init"])
 
+    # integration_simulation()に投げる部分
+    F = inputvalues["F_init"]
+    Pc = inputvalues["Pc_def"]
+    OF = inputvalues["OF_def"]
+    mdot = inputvalues["mdot_new"]
+    Df = inputvalues["Df_init"]
+    eta_cstar = inputvalues["eta_cstar"]
+    eta_nozzle = inputvalues["eta_nozzle"]
+    P_init = inputvalues["Pt_init"]
+    rho_f = inputvalues["rho_f"]
+    a_ox = inputvalues["a_ox"]
+    n_ox = inputvalues["n_ox"]
+    Kstar = inputvalues["Kstar"]
+    epsilon = inputvalues["epsilon"]
+    Lf = inputvalues["Lf"]
+    V_tank = inputvalues["Vol_ox"]
+    P_final = inputvalues["Pt_end"]
+    Dt = inputvalues["Dt"]
+
+    (_, _, _, _, _, _, _, evolution_result, It,) = sim.integration_simulation(
+        Pc=Pc, Df=Df, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,
+        epsilon=epsilon, Lf=Lf, mdot=mdot, V_tank=V_tank, P_init=P_init, P_final=P_final,
+        rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, F=F, Dt=Dt)
+    
+    # 結果出力
+    print("input output csv filename(example.csv):")
+    output_filename = input("> ").strip()
+
+    try:
+        # input記載用
+        input_params = [
+                ("Pc", Pc), ("Df", Df), ("OF", OF),
+                ("eta_cstar", eta_cstar), ("eta_nozzle", eta_nozzle), ("Kstar", Kstar),
+                ("epsilon", epsilon), ("Lf", Lf), ("mdot", mdot),
+                ("V_tank", V_tank), ("P_init", P_init), ("P_final", P_final),
+                ("rho_ox", rho_ox), ("rho_fuel", rho_f),
+                ("a", a_ox), ("n", n_ox), ("F", F), ("Dt", Dt)
+            ]
+        
+        # 時間発展記載用
+        evolution_headers = [
+                "F [N]",
+                "F_fte [N]",
+                "Ptank [MPa]",
+                "Pc [MPa]",
+                "O/F [-]",
+                "mdot [kg/s]",
+                "Df [m]",
+                "C* [m/s]",
+                "CF [-]",
+                "tank mass [g]",
+                "mdot_ox [g/ms]",
+                "gamma [-]"
+            ]
+
+        # データ本体出力
+        filename = output_filename
+        with open(filename, "w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file, quoting=csv.QUOTE_NONE)
+            # 入力パラメータの書き出し
+            writer.writerow(["# input params."])
+            for i in range(0, len(input_params), 3):
+                row = []
+                for j in range(3):
+                    if i + j < len(input_params):
+                        key, val = input_params[i + j]
+                        row.extend([key, val])
+                writer.writerow(row)
+
+
+            writer.writerow([])  # 空行
+            writer.writerow(["# evolution params."])
+            writer.writerow(evolution_headers)
+            writer.writerows(evolution_result)
+    except Exception as e:
+        print(f"loading error: {e}")
+        exit(1)
 
 # -------------------------
 # メイン処理

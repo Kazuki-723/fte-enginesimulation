@@ -172,7 +172,7 @@ cython_debug/
 
 
 #自家追加分
-.csv
+*.csv
 .mp4
 .png
 .gif

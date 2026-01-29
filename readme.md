@@ -55,7 +55,9 @@ GUI version
 
 CUI version
 - 入力値の編集に関して
-    - rocket_constants.pyに各パラメータの設定が要るので入力してください．全部floatです．
+    - 初期条件計算用のファイルが`sample_init.jsonc`，時間発展用のファイルが`sample_evo.jsonc`になっています．
+    - コメントをつけたままでも読み込めるようにしてあるので，値を適当にいじってください．
+    - 値の整合性とかはやってないので，float以外を入れると止まります．
 
 - csvファイルの名前を変えたい
     - rocket_simulation.pyの360行目`filename = f"filename.csv"`で変更できます．(filename.csvが出力されます．)
@@ -71,11 +73,8 @@ main_gui.pyでGUIversionを回すために必要なのは，
 
 で，残りは，過去のCUIversion用のフォルダとなっている．
 
-CUI versionは，
-- データ系のフォルダ(GUIと共通)
-- pythonfiles(endingsimu.pyは未使用)
+CUI versionもGUI versionと同じinputになるようにしました．
 
-で動作する．
 FLXsimulation.pyはCUIversionをクラス化して分割する前のコード．アルゴリズム周りがかなり違っているので，使わない．
 
 おおよそ，
@@ -99,12 +98,12 @@ Fix
 - 値エラー時に実行ボタンを押した際の挙動の統一
     - ボタンにエラーを出して押せなくする．
 - 有効数字まわり
-- eqn.8の誤植
 - ノズル周りにおける物性値の定義
 - etaの扱いの統一
 
 
 # Reference
+引継ぎの解説の方がいっぱい載っています．
 George P Sutton and Oscar Biblarz. Rocket Propulsion Elements. John Wiley & Sons, 9th edition, 2016. ISBN 9781118753910.
 
 Richard Nakka's Experimental Rocketry Web Site, https://www.nakka-rocketry.net/

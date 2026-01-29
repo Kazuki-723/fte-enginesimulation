@@ -55,6 +55,7 @@ class RocketSimulation:
         print(self.gamma_tmp1)
         print(self.Pc_def)
         print(self.Pa)
+
         self.epsilon_new = \
         ((self.gamma_tmp1 + 1) / 2) ** (1 / (self.gamma_tmp1 - 1)) * \
         (self.Pa / self.Pc_def) ** (1 / self.gamma_tmp1) * \
@@ -67,18 +68,21 @@ class RocketSimulation:
          self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
          self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, self.epsilon_new)
 
+        # iteration設定
         self.Pe_old = self.Pe_tmp1
         self.diff_exit = 2
         self.iter_logger = IterationLogger()
         self.i = 0
         self.j = 1
 
+        # ループ初期条件計算
         self.R_tmp1 = self.R_univ / self.Mole_tmp1
         self.a_tmp1 = np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
         self.Ve_tmp1 = self.a_tmp1 * self.Mach_tmp1
         self.F = self.mdot_new * self.Ve_tmp1
         self.diff_F = self.F_req - self.F
 
+        # 目標推力に対して収束させる
         while abs(self.diff_F) > 0.1:
             self.mdot_new = self.mdot_old + 0.0001 if self.diff_F >= 0.1 else self.mdot_old - 0.0001
             self.mdot_old = self.mdot_new
@@ -99,8 +103,6 @@ class RocketSimulation:
             np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
 
             # 開口比、出口面積
-            # self.epsilon_new = ((1 + (self.gamma_tmp1 - 1) * (self.Me_new**2) / 2)/(1 + (self.gamma_tmp1 - 1)/2)) ** ((self.gamma_tmp1+1) / 2*(self.gamma_tmp1-1)) / self.Me_new
-            # self.epsilon_new = 1/self.epsilon_new
             self.Ae_new = (self.Pthroat_tmp1/self.Pa) ** (1/self.gamma_tmp1) * (1/self.Me_new) * self.At_new
             self.epsilon_new = self.Ae_new / self.At_new
             print("calc.epsilon  = ", self.epsilon_new, "[-]")
@@ -131,7 +133,7 @@ class RocketSimulation:
         self.mdot_ox_init = (self.OF_def / (self.OF_def + 1)) * self.mdot_new  # 初期酸化剤流量[kg/s]
         self.mdot_f_init = (1 / (self.OF_def + 1)) * self.mdot_new  # 初期燃料流量[kg/s]
 
-        # Discharge coef. * orifice cross section
+        # Kstar = Discharge coef. * orifice cross section
         self.Kstar = self.mdot_ox_init / np.sqrt(2 * self.rho_ox_init * ((self.Ptank_init - self.Pc_def) * 1e6))
 
         # O/F, 燃料形状
@@ -246,7 +248,8 @@ class RocketSimulation:
 
         print("epsilon_new = ", self.epsilon_new)
 
-        while self.Mass_ox_remain >= 1:  # 酸化剤残量が0になるまで計算を続ける
+        # 酸化剤残量が0になるまで時間発展
+        while self.Mass_ox_remain >= 1:
             self.delta_p = (self.Ptank_tmp1 - self.Pc_tmp1) * 1000000
             self.mdot_ox = (self.Kstar * np.sqrt(2 * self.rho_ox_init * self.delta_p))  # 微小時間における流量[g/ms]
             self.mdot_f = (self.Ap * self.rho_f_start * self.a_ox * ((4 * self.mdot_ox) / (math.pi * self.Df ** 2)) ** self.n_ox)  # 微小時間における燃料流量[g/ms]
@@ -261,6 +264,7 @@ class RocketSimulation:
             print("mdot_ox = ", self.mdot_ox, "[g/ms]")
             print("mdot_f = ", self.mdot_f, "[g/ms]")
 
+            # OF算出
             self.OF_tmp1 = self.mdot_ox / self.mdot_f
             print("OF_tmp1", self.OF_tmp1)
 
@@ -268,11 +272,12 @@ class RocketSimulation:
              self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1, 
              self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
 
+            # 気体物性値評価
             self.R_tmp1 = self.R_univ / self.Mole_tmp1  # 気体定数
             self.a_tmp1 = np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)  # 音速
 
             # 推力の計算
-            self.F_fte = self.eta * ((self.mdot_ox + self.mdot_f) * self.a_tmp1 * self.Mach_tmp1) + (self.Pe_tmp1 - self.Pa_tmp1) * self.Ae_new
+            self.F_fte = self.eta * ((self.mdot_ox + self.mdot_f) * self.a_tmp1 * self.Mach_tmp1 + (self.Pe_tmp1 - self.Pa_tmp1) * self.Ae_new)
             # CFを実装する
             self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_tmp1
             self.F_new = self.eta * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) * self.CF_tmp1
@@ -282,7 +287,7 @@ class RocketSimulation:
             print("Pe = ", self.Pe_tmp1)
             self.Mass_ox_remain = self.Mass_ox_remain - self.mdot_ox
 
-            # Ptの計算
+            # Pt, Pcの計算
             self.Ptank_tmp1 = self.Ptank_fin + (self.Ptank_init - self.Ptank_fin) * (self.Mass_ox_remain / self.Mass_ox)
             self.Pc_tmp1 = 4 * self.eta_cstar * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) /(math.pi * self.Dt ** 2 ) / 1000000
             self.k = self.k + 1
@@ -326,5 +331,6 @@ class RocketSimulation:
         evolution_result = np.stack([self.F_arr, self.F_fte_arr, self.Pt_arr, self.Pc_int_arr, self.OF_arr, self.mdot_arr, self.Df_arr, self.Cstar_arr, self.CF_arr, self.M_ox_arr, self.mdot_ox_arr, self.gamma_arr]).T
         return time_ms, self.F_arr, self.F_fte_arr, self.OF_arr, self.Cstar_arr, self.Pc_int_arr, self.Pt_arr, evolution_result, self.It
     
+    # GUIでグラフを書くためだけに存在する関数
     def get_evolution_plot_base64(self, time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr):
         return IterationLogger.plot_time_series(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr)

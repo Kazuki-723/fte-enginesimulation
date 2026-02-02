@@ -1,39 +1,9 @@
-import re
 import csv
 from inputprograms.rocket_simulation import RocketSimulation
 from inputprograms.interp_density import OxidizerDatabase
 from inputprograms.importjson import JsoncLoader
 sim = RocketSimulation()
 ox_db = OxidizerDatabase()
-
-def parse_initial_results(text: str) -> dict:
-    result = {}
-    # K*
-    match_k = re.search(r"K\* *= *([\d\.Ee+-]+)", text)
-    if match_k:
-        result["Kstar"] = float(match_k.group(1))
-    # epsilon
-    match_eps = re.search(r"最終epsilon *= *([\d\.Ee+-]+)", text)
-    if match_eps:
-        result["epsilon"] = float(match_eps.group(1))
-    # Lf（燃料長さ）
-    match_lf = re.search(r"燃料長さ *= *([\d\.Ee+-]+)", text)
-    if match_lf:
-        result["Lf"] = float(match_lf.group(1))
-    # mdot
-    match_mdot = re.search(r"最終mdot *= *([\d\.Ee+-]+)", text)
-    if match_mdot:
-        result["mdot"] = float(match_mdot.group(1))
-    # 初期推力F
-    match_F = re.search(r"最終推力 *= *([\d\.Ee+-]+)", text)
-    if match_F:
-        result["F"] = float(match_F.group(1))
-    # Dt
-    match_Dt = re.search(r"Dt *= *([\d\.Ee+-]+)", text)
-    if match_Dt:
-        result["Dt"] = float(match_Dt.group(1))
-
-    return result
 
 # Ptからrho_oxを計算
 def calc_rho_ox(pressure):

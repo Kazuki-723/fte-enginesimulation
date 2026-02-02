@@ -36,7 +36,7 @@ def main(page: ft.Page):
         result_text = ft.Text()
         graph_image = ft.Image(visible=False, width=page.window.width - 200)
 
-                # 登録物質と物性値（a, n は仮値）
+        # 登録物質と物性値（ABSのa, n は仮値）
         materials = {
             "PMMA": {"密度": 1190, "a": 0.000131, "n": 0.34},
             "ABS": {"密度": 1040, "a": 0.90, "n": 1.1},
@@ -121,7 +121,7 @@ def main(page: ft.Page):
             graph_image.visible = True
 
             page.session.set("initial_conditions", values)  # 初期条件保存
-            page.session.set("initial_results", output)  # 出力保存
+            page.session.set("initial_results", output)     # 出力保存
             page.update()
 
         # 実行ボタンと遷移ボタンを並べる
@@ -248,7 +248,7 @@ def main(page: ft.Page):
         # タンク容積と最終酸化剤圧力の入力欄
         tank_volume_input = ft.TextField(label="タンク容積 [m³]", width=150)
         initial_pressure_input = ft.TextField(label="初期酸化剤圧力 [MPa]", value=Pt_init,width=150)
-        rho_ox_input = ft.TextField(label="初期酸化剤密度(DBから自分で算出してください) [kg/s]", value=rho_ox,width=150)
+        rho_ox_input = ft.TextField(label="初期酸化剤密度(圧力をいじる場合は調整してください．) [kg/s]", value=rho_ox,width=150)
         final_pressure_input = ft.TextField(label="最終酸化剤圧力 [MPa]", width=150)
 
         csv_download_button = ft.ElevatedButton(
@@ -280,7 +280,7 @@ def main(page: ft.Page):
             filename = f"result.csv"
             with open(filename, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file, quoting=csv.QUOTE_NONE)
-                # ✅ 入力パラメータの書き出し
+                # 入力パラメータの書き出し
                 writer.writerow(["# input params."])
                 for i in range(0, len(input_params), 3):
                     row = []
@@ -383,7 +383,7 @@ def main(page: ft.Page):
         run_button = ft.ElevatedButton(
             text="時間発展計算 ▶", on_click=on_run_simulation
         )
-        evolution_output = ft.Text("🕒 時間発展シミュレーション（仮表示）")
+        evolution_output = ft.Text("🕒 時間発展シミュレーション")
 
         return ft.View(
             route="/evolution",

@@ -105,11 +105,9 @@ class RocketSimulation:
             # 開口比、出口面積
             self.Ae_new = (self.Pthroat_tmp1/self.Pa) ** (1/self.gamma_tmp1) * (1/self.Me_new) * self.At_new
             self.epsilon_new = self.Ae_new / self.At_new
-            print("calc.epsilon  = ", self.epsilon_new, "[-]")
 
             # 出口面積
             self.Ae_new = self.At_new * self.epsilon_new
-            print("exit pres. = ",self.Pe_tmp1)
 
             #推力計算
             self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_def
@@ -127,6 +125,15 @@ class RocketSimulation:
             log.append(f"epsilon_new = {self.epsilon_new:.4f}")
             log.append(f"Dt = {self.Dt:.4f} m, De = {self.De:.4f} m")
             self.iter_logger.append(self.j, self.F, self.mdot_new, self.Pe_tmp1, self.epsilon_new)
+
+            # iteration log print
+            print(f"--- Iteration {self.j} ---")
+            print(f"Thrust = {self.F:.3f} [N]")
+            print(f"diff_F = {self.diff_F:.6f} [N]")
+            print(f"mdot = {self.mdot_new:.6f} [kg/s]")
+            print(f"Pe = {self.Pe_tmp1:.4f} [MPa]")
+            print(f"epsilon_new = {self.epsilon_new:.4f}")
+            print(f"Dt = {self.Dt:.4f} m, De = {self.De:.4f} m")
             self.j += 1
 
         # 初期状態の計算
@@ -157,17 +164,21 @@ class RocketSimulation:
         log.append("-------------")
 
         print("-------------")
-        print("Thrust = ", self.F, "[N]")
+        print("Thrust(input value) = ", self.F, "[N]")
+        print("chamber pressure(input value) = ", self.Pc_def, "[MPa]")
+        print("O/F(input value) = ", self.OF_def, "[-]")
         print("mdot = ", self.mdot_new, "[kg/s]")
-        print("Pe = ", self.Pe_tmp1, "[MPa]")
-        print("epsilon_new = ", self.epsilon_new)
-        print("Dt, De = ", self.Dt, self.De, "[m]")
+        print("Df(input value) = ", self.Df_init, "[m]")
+        print("eta_cstar(input value) = ", self.eta_cstar, "[-]")
+        print("eta_nozzle(input value) = ", self.eta_nozzle, "[-]")
         print("Kstar = ", self.Kstar)
+        print("epsilon_new = ", self.epsilon_new)
+        print("Lf = ", self.Lf, "[m]")
+        print("Dt, De = ", self.Dt, self.De, "[m]")
+        print("/n")
+        print("Pe = ", self.Pe_tmp1, "[MPa]")
         print("mdot_ox = ", self.mdot_ox_init, "[kg/s]")
         print("mdot_f = ", self.mdot_f_init, "[kg/s]")
-        print("mdot =  ",self.mdot_f_init + self.mdot_f_init,"[kg/s]")
-        print("Df(input value) = ", self.Df_init, "[m]")
-        print("Lf = ", self.Lf, "[m]")
         print("END")
         print("-------------")
 

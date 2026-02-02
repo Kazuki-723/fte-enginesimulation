@@ -49,7 +49,7 @@ class RocketSimulation:
         #epsilon 調整
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
          self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-         self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, epsilon=3)
+         self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, epsilon=3)
         
         # epsilonの計算式, 怪しいので調べる
         print(self.gamma_tmp1)
@@ -66,7 +66,7 @@ class RocketSimulation:
         # 初期CEA計算
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
          self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-         self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, self.epsilon_new)
+         self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, self.epsilon_new)
 
         # iteration設定
         self.Pe_old = self.Pe_tmp1
@@ -77,7 +77,7 @@ class RocketSimulation:
 
         # ループ初期条件計算
         self.R_tmp1 = self.R_univ / self.Mole_tmp1
-        self.a_tmp1 = np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
+        #self.a_tmp1 = np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
         self.Ve_tmp1 = self.a_tmp1 * self.Mach_tmp1
         self.F = self.mdot_new * self.Ve_tmp1
         self.diff_F = self.F_req - self.F
@@ -89,11 +89,11 @@ class RocketSimulation:
 
             (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
              self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-             self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, self.epsilon_new)
+             self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, self.epsilon_new)
 
             # 出口速度計算
             self.R_tmp1 = self.R_univ / self.Mole_tmp1
-            self.a_tmp1 = np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
+            #self.a_tmp1 = np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
             self.Ve_tmp1 = self.a_tmp1 * self.Mach_tmp1
             # スロート断面積計算
             self.At_new = self.eta_cstar * self.Cstar_tmp1 * self.mdot_new / (self.Pc_def * 10 ** 6)
@@ -175,7 +175,7 @@ class RocketSimulation:
         print("epsilon_new = ", self.epsilon_new)
         print("Lf = ", self.Lf, "[m]")
         print("Dt, De = ", self.Dt, self.De, "[m]")
-        print("/n")
+        print(f"\n")
         print("Pe = ", self.Pe_tmp1, "[MPa]")
         print("mdot_ox = ", self.mdot_ox_init, "[kg/s]")
         print("mdot_f = ", self.mdot_f_init, "[kg/s]")
@@ -239,7 +239,7 @@ class RocketSimulation:
         # 初期状態CEAを回しなおす
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1, 
              self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1, 
-             self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
+             self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
 
         # log配列
         self.OX = self.Mass_ox
@@ -281,14 +281,14 @@ class RocketSimulation:
 
             (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1, 
              self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1, 
-             self.Pe_tmp1, self.Mach_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
+             self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
 
             # 気体物性値評価
             self.R_tmp1 = self.R_univ / self.Mole_tmp1  # 気体定数
-            self.a_tmp1 = np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)  # 音速
+            #self.a_tmp1 = np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)  # 音速
 
             # 推力の計算
-            self.F_fte = self.eta * ((self.mdot_ox + self.mdot_f) * self.a_tmp1 * self.Mach_tmp1 + (self.Pe_tmp1 - self.Pa_tmp1) * self.Ae_new)
+            self.F_fte = self.eta * ((self.mdot_ox + self.mdot_f) * self.a_tmp1 * self.Mach_tmp1 + (self.Pe_tmp1 - self.Pa_tmp1) * self.Ae_new * 1e6)
             # CFを実装する
             self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_tmp1
             self.F_new = self.eta * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) * self.CF_tmp1

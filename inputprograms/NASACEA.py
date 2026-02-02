@@ -80,6 +80,8 @@ def CEA(Pc, OF,epsilon):
         #     epsilon_num = re.findall(r"\d*\.\d+",outputlist_new[i])
         elif 'P, BAR' in outputlist_new[i]:
             Pt_num = re.findall(r"\d*\.\d+",outputlist_new[i])
+        elif 'SON VEL,M/SEC' in outputlist_new[i]:
+            a_0_num = re.findall(r"\d*\.\d+",outputlist_new[i])
         elif 'MACH NUMBER' in outputlist_new[i]:
             Mach_num = re.findall(r"\d*\.\d+",outputlist_new[i])
     
@@ -94,7 +96,8 @@ def CEA(Pc, OF,epsilon):
     Mole_new = float(Mole_num[2])
     # epsilon_new = float(epsilon_num[1]) #出口開口比
     Pthroat_new = float(Pt_num[1])/10 #MPaに直す,スロート圧
+    a_0_new = float(a_0_num[2]) # 出口音速
     Mach_new = float(Mach_num[2])#出口速度マッハ数
     Pe_new = float(Pt_num[2])/10#出口圧
 
-    return gamma_new, Cstar_new, CF_new, T_c_new, T_t_new, T_e_new, Mole_new, Pthroat_new, Pe_new, Mach_new
+    return gamma_new, Cstar_new, CF_new, T_c_new, T_t_new, T_e_new, Mole_new, Pthroat_new, Pe_new, Mach_new, a_0_new

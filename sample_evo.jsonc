@@ -12,7 +12,7 @@
     "Kstar":  4.513866707266423e-06, // Kstar = Cd * A_orifice [m^2]
     "epsilon": 3.15, // 開口比 [-]
     "Lf": 0.36, // 燃料長さ [-]
-    "Dt":  0.0155, // スロート径 [m]
+    "Dt":  0.0173, // スロート径 [m]
 
     /*
     fuel oxidizer material constants
@@ -25,6 +25,6 @@
     /*
     time evolution constants
     */
-    "Vol_ox": 0.00044, // タンク容積 [m^3]
-    "Pt_end": 2.6 //終了時タンク圧 [MPa]
+    "Vol_ox": 0.002, // タンク容積 [m^3]
+    "Pt_end": 2.3 //終了時タンク圧 [MPa]
 }

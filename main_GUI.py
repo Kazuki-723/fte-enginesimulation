@@ -76,7 +76,7 @@ def main(page: ft.Page):
         def on_pressure_change(e):
             try:
                 p = float(pressure_input.value)
-                result = ox_db.get_density(p)
+                result = ox_db.get_density(p, phase = "liquid")
                 density_output.value = result
             except ValueError:
                 density_output.value = "⚠️ 数値で入力してください"

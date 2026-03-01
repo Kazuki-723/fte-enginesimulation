@@ -2,6 +2,14 @@ import numpy as np
 import math
 from inputprograms.cea_interface import CEAInterface
 from inputprograms.iteration_logger import IterationLogger
+from inputprograms.interp_density import OxidizerDatabase
+ox_db = OxidizerDatabase()
+
+# Ptからrho_oxを計算(gasphase)
+def calc_rho_ox_gas(pressure):
+    ox_calc_result = ox_db.get_density(pressure, phase = "gas")
+    rho_ox = float(ox_calc_result.split(":")[-1].replace("kg/m³", "").strip())
+    return rho_ox
 
 # 定数定義
 R_univ = 8314 # 一般気体定数 [J/mol-K]
@@ -270,8 +278,14 @@ class RocketSimulation:
 
         print("epsilon_new = ", self.epsilon_new)
 
-        # 酸化剤残量が0になるまで時間発展
-        while self.Mass_ox_remain >= 1:
+        # 終了時酸化剤質量を定義
+        rho_ox_end =  calc_rho_ox_gas(self.Ptank_fin)
+        Mass_ox_end = self.Vol_ox * rho_ox_end * 1000
+        print(Mass_ox_end)
+        print(self.Mass_ox_remain)
+
+        # 酸化剤が規定量になるまで時間発展
+        while self.Mass_ox_remain >= Mass_ox_end:
             self.delta_p = (self.Ptank_tmp1 - self.Pc_tmp1) * 1000000
             self.mdot_ox = (self.Kstar * np.sqrt(2 * self.rho_ox_init * self.delta_p))  # 微小時間における流量[g/ms]
             self.mdot_f = (self.Ap * self.rho_f_start * self.a_ox * ((4 * self.mdot_ox) / (math.pi * self.Df ** 2)) ** self.n_ox)  # 微小時間における燃料流量[g/ms]
@@ -310,7 +324,7 @@ class RocketSimulation:
             self.Mass_ox_remain = self.Mass_ox_remain - self.mdot_ox
 
             # Pt, Pcの計算
-            self.Ptank_tmp1 = self.Ptank_fin + (self.Ptank_init - self.Ptank_fin) * (self.Mass_ox_remain / self.Mass_ox)
+            self.Ptank_tmp1 = self.Ptank_init + (self.Ptank_fin - self.Ptank_init) / (Mass_ox_end - self.Mass_ox) * (self.Mass_ox_remain - self.Mass_ox)
             self.Pc_tmp1 = 4 * self.eta_cstar * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) /(math.pi * self.Dt ** 2 ) / 1000000
             self.k = self.k + 1
 

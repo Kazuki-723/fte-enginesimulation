@@ -5,9 +5,9 @@ from inputprograms.importjson import JsoncLoader
 sim = RocketSimulation()
 ox_db = OxidizerDatabase()
 
-# Ptからrho_oxを計算
+# Ptからrho_oxを計算(liquid phase)
 def calc_rho_ox(pressure):
-    ox_calc_result = ox_db.get_density(pressure)
+    ox_calc_result = ox_db.get_density(pressure, phase = "liquid")
     rho_ox = float(ox_calc_result.split(":")[-1].replace("kg/m³", "").strip())
     return rho_ox
 

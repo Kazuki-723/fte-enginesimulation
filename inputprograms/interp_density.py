@@ -11,13 +11,11 @@ class OxidizerDatabase:
         self.va_interp = interp1d(df_vap['Pres'].values, df_vap['Dens'].values, kind='cubic', fill_value='extrapolate')
         self.vap_range = (min(df_vap['Pres'].values), max(df_vap['Pres'].values))
 
-    def get_density(self, pressure: float) -> str:
-        if self.liq_range[0] <= pressure <= self.liq_range[1]:
+    def get_density(self, pressure: float, phase ="liquid") -> str:
+        if phase =="liquid":
             rho = self.li_interp(pressure)
-            phase = "液相"
-        elif self.vap_range[0] <= pressure <= self.vap_range[1]:
+        elif phase == "gas":
             rho = self.va_interp(pressure)
-            phase = "気相"
         else:
-            return "圧力範囲外"
+            return "error"
         return f"{phase}密度: {rho:.2f} kg/m³"

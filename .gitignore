@@ -179,6 +179,7 @@ cython_debug/
 .inp
 .out
 .zip
+.jsonc
 
 /data
 /inputdatas

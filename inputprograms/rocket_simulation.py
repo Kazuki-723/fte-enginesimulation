@@ -253,7 +253,11 @@ class RocketSimulation:
         #====================#
         # タンク内部定義
         self.Mass_ox = self.Vol_ox * self.rho_ox_init * 1000  
-        self.Mass_ox_remain = self.Mass_ox  
+        self.Mass_ox_remain = self.Mass_ox
+
+        # 有効長さを定義
+        diseffect_length = self.Df / 2 / math.tan(math.radians(12))
+        self.Lf = self.Lf - diseffect_length
 
         # 初期状態CEAを回しなおす
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1, 

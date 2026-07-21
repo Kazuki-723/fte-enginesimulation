@@ -1,6 +1,9 @@
 # FTE enginesimulator
-過去に使っていたExcelデータのフローの改良及び，データ出力をおこなってくれるソフトのGUIVersionです．
+過去に使っていたExcelデータのフローの改良及び，データ出力をおこなってくれるソフトです．
 ※リリースしたCUIとGUIは計算式をそろえていますが，同一の結果が出るかは検証していません．
+
+2026/7以降の修正から順次CLI運用をメインにします．
+軽い動作確認はしますがチャンとデバッグはしません．
 
 # Getting Started
 
@@ -81,6 +84,8 @@ FLXsimulation.pyはCUIversionをクラス化して分割する前のコード．
 FLXsimulation.pyが一番古いデータで，そこからフォルダ整理したのが，main.py-pythonfliesの部分
 残りはおおよそ試行錯誤中の子たち．
 # Version History
+ 2026/3/2  v1.2.0 リリース
+ 2026/2/2  v1.1.0 リリース
  2025/12/4 V1.0.0 リリース
 
 # developer's Memo

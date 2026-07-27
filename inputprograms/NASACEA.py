@@ -13,7 +13,7 @@ def CEA(Pc, OF,epsilon):
     # P_inj = round(P_c/1.013,3)
 
 
-
+    # inpファイル作成部，書式は自分で勉強して()
     with open(path, mode = "w") as f:
         f.write("problem    o/f= ")
         f.write(str(OF))
@@ -29,13 +29,13 @@ def CEA(Pc, OF,epsilon):
         f.write("\n")
 
         # todo oxのデータとfuelのデータを外部入力可能にする
-        # PMMAの物性値
+        # PMMAの物性値(標準生成エンタルピーは要検討)
         f.write("react\n")
         f.write(" oxid=N2O wt=100  t,k=290\n")
         f.write(" fuel=PMMA wt=100  t,k=290\n")
         f.write("    h,kj/mol=-552.9  C 5 O 2 H 8\n")
 
-        # ABSのデータ
+        # ABSのデータ(mol比を等しいものとして，質量比を算出したはず)
         # f.write(" fuel=acrylonitrile wt=43  t,k=290\n")
         # f.write("    h,kj/mol=172.6  C 3 N 1 H 3\n")
         # f.write(" fuel=butadiene wt=47  t,k=290\n")
@@ -46,6 +46,7 @@ def CEA(Pc, OF,epsilon):
         f.write("end")
 
     # CEAを走らせる
+    # Mac未対応の原因
     os.chdir('data')
     with subprocess.Popen('FCEA2m.exe', stdin=subprocess.PIPE, encoding="ASCII", stdout = subprocess.DEVNULL) as proc:
         proc.stdin.write("yoshidaexcel\n")

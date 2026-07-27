@@ -4,6 +4,11 @@ import matplotlib.pyplot as plt
 import io, base64
 
 class IterationLogger:
+    """
+    GUI専用クラス
+    GUI側で実行後に結果をmatplotlibで表示する機能のためのもの
+    エンコーダーはfletとの相性の問題かAgg
+    """
     def __init__(self):
         self.log = []
 
@@ -31,21 +36,26 @@ class IterationLogger:
         print("plot start")
         fig, axs = plt.subplots(3, 2, figsize=(12, 10))
 
-        # 1段目
+        # 1段目　
+        # Thrustの収束履歴
         axs[0, 0].plot(data["j"], data["F"], marker='o')
         axs[0, 0].set_title("Thrust [N]")
 
+        # 総流量の収束履歴
         axs[0, 1].plot(data["j"], data["mdot"], marker='o')
         axs[0, 1].set_title("Mass Flow Rate [kg/s]")
 
         # 2段目
+        # 出口圧の収束履歴
         axs[1, 0].plot(data["j"], data["Pe"], marker='o')
         axs[1, 0].set_title("Exit Pressure [MPa]")
 
+        # 開口比の収束履歴
         axs[1, 1].plot(data["j"], data["epsilon"], marker='o')
         axs[1, 1].set_title("Expansion Ratio [-]")
 
         # 3段目：Do vs Cd
+        # K* =const.として，オリフィス径と流量係数の関係計算
         axs[2, 0].plot(Dovalue, cdvalue, color='blue')
         axs[2, 0].set_title("Do vs Cd")
         axs[2, 0].set_xlabel("Do [m]")
@@ -59,8 +69,9 @@ class IterationLogger:
             for j in range(2):
                 axs[i, j].set_xlabel("Iteration")
                 axs[i, j].grid(True)
-
         axs[2, 0].grid(True)
+
+        # 基本設定，データエンコード
         plt.tight_layout()
         buf = io.BytesIO()
         plt.savefig(buf, format="png")
@@ -75,24 +86,30 @@ class IterationLogger:
         fig, axs = plt.subplots(2, 2, figsize=(10, 8))
 
         # 1段目
+        # 推力は二通りの計算方法が存在しているため両方表示
         axs[0, 0].plot(time_ms, F_arr, marker='o', label = "F_CF")
         axs[0, 0].plot(time_ms, F_fte_arr, marker='x', label = "F_mdot")
         axs[0, 0].set_xlabel("Time [ms]")
         axs[0, 0].set_ylabel("Thrust [N]")
 
+        # OFの時間履歴
         axs[0, 1].plot(time_ms, OF_arr, marker='o')
         axs[0, 1].set_xlabel("Time [ms]")
         axs[0, 1].set_ylabel("O/F [-]")
 
         # 2段目
+        # Cstarの時間履歴
         axs[1, 0].plot(time_ms, Cstar_arr, marker='o')
         axs[1, 0].set_xlabel("Time [ms]")
         axs[1, 0].set_ylabel("Charactaristic velosity [m/s]")
 
+        # タンク圧，燃焼室圧の時間履歴
         axs[1, 1].plot(time_ms, Pc_arr, marker='o')
         axs[1, 1].plot(time_ms, Pt_arr, marker='o')
         axs[1, 1].set_xlabel("Time [ms]")
         axs[1, 1].set_ylabel("Pressure [MPa]")
+
+        # 基本設定，データエンコード
         plt.tight_layout()
         buf = io.BytesIO()
         plt.savefig(buf, format="png")

@@ -5,12 +5,6 @@ from inputprograms.iteration_logger import IterationLogger
 from inputprograms.interp_density import OxidizerDatabase
 ox_db = OxidizerDatabase()
 
-# Ptからrho_oxを計算(gasphase)
-def calc_rho_ox_gas(pressure):
-    ox_calc_result = ox_db.get_density(pressure, phase = "gas")
-    rho_ox = float(ox_calc_result.split(":")[-1].replace("kg/m³", "").strip())
-    return rho_ox
-
 # 定数定義
 R_univ = 8314 # 一般気体定数 [J/mol-K]
 Pa = 0.1013   # 大気圧 [MPa]
@@ -34,7 +28,12 @@ class RocketSimulation:
         self.M_ox_arr = np.array([])
         self.kstar_cd_list = np.array([])
 
+    # Ptからrho_oxを計算
+    def calc_rho_ox(self, pressure, phasedata):
+        phase, rho = ox_db.get_density(pressure, phase = phasedata)
+        return phase, rho
 
+    # 初期値計算本体
     def initial_convergence(self, F_req, Pc_def, OF_def, mdot_new, Df_init, eta_cstar, eta_nozzle, Ptank_init, rho_ox_init, rho_f_start, a_ox, n_ox):
         log = []
 
@@ -283,7 +282,7 @@ class RocketSimulation:
         print("epsilon_new = ", self.epsilon_new)
 
         # 終了時酸化剤質量を定義
-        rho_ox_end =  calc_rho_ox_gas(self.Ptank_fin)
+        _, rho_ox_end =  RocketSimulation.calc_rho_ox(self, self.Ptank_fin, "gas")
         Mass_ox_end = self.Vol_ox * rho_ox_end * 1000
         print(Mass_ox_end)
         print(self.Mass_ox_remain)

@@ -5,12 +5,6 @@ from inputprograms.importjson import JsoncLoader
 sim = RocketSimulation()
 ox_db = OxidizerDatabase()
 
-# Ptからrho_oxを計算(liquid phase)
-def calc_rho_ox(pressure):
-    ox_calc_result = ox_db.get_density(pressure, phase = "liquid")
-    rho_ox = float(ox_calc_result.split(":")[-1].replace("kg/m³", "").strip())
-    return rho_ox
-
 # -------------------------
 # 初期条件計算モード
 # -------------------------
@@ -31,7 +25,7 @@ def run_initial_condition_mode():
         print(f"{key} = {val}")
 
     # Ptからrho_oxを計算
-    rho_ox = calc_rho_ox(inputvalues["Pt_init"])
+    _, rho_ox = sim.calc_rho_ox(inputvalues["Pt_init"], "liquid")
 
     # initial_convergence()に投げる部分
     F_req = inputvalues["F_req"]
@@ -54,7 +48,7 @@ def run_initial_condition_mode():
     )
 
 # -------------------------
-# 時間発展計算モード（これから作成）
+# 時間発展計算モード
 # -------------------------
 def run_time_evolution_mode():
     print("time_evolution mode selected")
@@ -73,7 +67,7 @@ def run_time_evolution_mode():
         print(f"{key} = {val}")
 
     # Ptからrho_oxを計算
-    rho_ox = calc_rho_ox(inputvalues["Pt_init"])
+    _, rho_ox = sim.calc_rho_ox(inputvalues["Pt_init"], "liquid")
 
     # integration_simulation()に投げる部分
     F = inputvalues["F_init"]

@@ -18,4 +18,4 @@ class OxidizerDatabase:
             rho = self.va_interp(pressure)
         else:
             return "error"
-        return f"{phase}密度: {rho:.2f} kg/m³"
+        return phase, rho

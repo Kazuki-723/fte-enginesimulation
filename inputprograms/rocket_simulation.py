@@ -71,7 +71,7 @@ class RocketSimulation:
         (self.Pa / self.Pc_def) ** (1 / self.gamma_tmp1) * \
         np.sqrt((self.gamma_tmp1 + 1) / (self.gamma_tmp1 - 1) * (1 - (self.Pa/ self.Pc_def) ** ((self.gamma_tmp1 - 1) / self.gamma_tmp1)))
         self.epsilon_new = 1/self.epsilon_new
-        print("calcrated epsilon = ", self.epsilon_new, "[-]")
+        print("calculated epsilon = ", self.epsilon_new, "[-]")
 
         # 初期CEA計算
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
@@ -140,7 +140,6 @@ class RocketSimulation:
             print(f"diff_F = {self.diff_F:.6f} [N]")
             print(f"mdot = {self.mdot_new:.6f} [kg/s]")
             print(f"Pe = {self.Pe_tmp1:.4f} [MPa]")
-            print(f"epsilon_new = {self.epsilon_new:.4f}")
             print(f"Dt = {self.Dt:.4f} m, De = {self.De:.4f} m")
             self.j += 1
 

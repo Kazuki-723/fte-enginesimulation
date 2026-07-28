@@ -39,7 +39,7 @@ def run_initial_condition_mode():
     a_ox = inputvalues["a_ox"]
     n_ox = inputvalues["n_ox"]
 
-    init_output, _, _ = sim.initial_convergence(
+    _, _, _ = sim.initial_convergence(
         F_req, Pc_def, OF_def, mdot_new, Df_init,
         eta_cstar, eta_nozzle, Ptank_init,
         rho_ox_init, rho_f_start, a_ox, n_ox
@@ -86,7 +86,7 @@ def run_time_evolution_mode():
     P_final = inputvalues["Pt_end"]
     Dt = inputvalues["Dt"]
 
-    (_, _, _, _, _, _, _, evolution_result, It,) = sim.integration_simulation(
+    (_, _, _, _, _, _, _, evolution_result, _,) = sim.integration_simulation(
         Pc=Pc, Df=Df, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,
         epsilon=epsilon, Lf=Lf, mdot=mdot, V_tank=V_tank, P_init=P_init, P_final=P_final,
         rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, F=F, Dt=Dt)

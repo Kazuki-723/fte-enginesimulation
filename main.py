@@ -1,9 +1,7 @@
 import csv
 from inputprograms.rocket_simulation import RocketSimulation
-from inputprograms.interp_density import OxidizerDatabase
 from inputprograms.importjson import JsoncLoader
 sim = RocketSimulation()
-ox_db = OxidizerDatabase()
 
 # -------------------------
 # 初期条件計算モード

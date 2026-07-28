@@ -3,7 +3,6 @@ import math
 from inputprograms.cea_interface import CEAInterface
 from inputprograms.iteration_logger import IterationLogger
 from inputprograms.interp_density import OxidizerDatabase
-ox_db = OxidizerDatabase()
 
 # 定数定義
 R_univ = 8314 # 一般気体定数 [J/mol-K]
@@ -14,7 +13,9 @@ class RocketSimulation:
         # 定数・初期パラメータのセットアップ
         self.R_univ = R_univ
         self.Pa = Pa
+        self.ox_db = OxidizerDatabase()
         self.iter_logger = IterationLogger()
+        self.diffuse_deg = 12 #ディフューザーの拡大角[deg]
 
         # 積分計算用の配列初期化
         self.Pt_arr = np.array([])
@@ -31,7 +32,7 @@ class RocketSimulation:
 
     # Ptからrho_oxを計算
     def calc_rho_ox(self, pressure, phasedata):
-        phase, rho = ox_db.get_density(pressure, phase = phasedata)
+        phase, rho = self.ox_db.get_density(pressure, phase = phasedata)
         return phase, rho
 
     # 初期値計算本体
@@ -163,6 +164,9 @@ class RocketSimulation:
         # Dfから燃料長さを計算
         self.Lf = self.Ap_req / (self.Df_init * math.pi)
 
+        # 上の有効長さから全長を計算
+        self.Lf_total = self.Lf + self.Df_init / 2 / math.tan(math.radians(self.diffuse_deg))
+
         # 最終結果log保存
         log.append("-------------")
         log.append(f"最終推力 = {self.F:.3f} [N]")
@@ -190,7 +194,8 @@ class RocketSimulation:
         print("eta_nozzle(input value) = ", self.eta_nozzle, "[-]")
         print("Kstar = ", self.Kstar)
         print("epsilon_new = ", self.epsilon_new)
-        print("Lf = ", self.Lf, "[m]")
+        print("Lf(effective length) = ", self.Lf, "[m]")
+        print("Lf(total length) = ", self.Lf_total, "[m]")
         print("Dt, De = ", self.Dt, self.De, "[m]")
         print(f"\n")
         print("Pe = ", self.Pe_tmp1, "[MPa]")
@@ -260,7 +265,7 @@ class RocketSimulation:
         self.Mass_ox_remain = self.Mass_ox
 
         # 有効長さを定義
-        diseffect_length = self.Df / 2 / math.tan(math.radians(12))
+        diseffect_length = self.Df / 2 / math.tan(math.radians(self.diffuse_deg))
         self.Lf = self.Lf - diseffect_length
 
         # 初期状態CEA

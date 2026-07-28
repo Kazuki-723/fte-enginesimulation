@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # 読み込むファイルの名前を入れる
-filename = "2000ccV2.csv"
+filename = "test.csv"
 df = pd.read_csv(filename, skiprows=9, header=0)
 
 columns = df.columns
@@ -94,6 +94,19 @@ plt.plot(time, mdot_f_arr, label="fuel")
 plt.xlabel("Time [s]")
 plt.ylabel("Mass flow Rate [kg/s]")
 plt.title("Mass Flow Rate vs Time")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+#--
+# 6. OF vs time
+#--
+plt.figure(figsize=(10, 5))
+plt.plot(time, OF_arr, label="OF")
+plt.xlabel("Time [s]")
+plt.ylabel("OF ratio [-]")
+plt.title("OF ratio vs Time")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()

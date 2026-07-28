@@ -5,7 +5,7 @@ from inputprograms.iteration_logger import IterationLogger
 from inputprograms.interp_density import OxidizerDatabase
 
 # 定数定義
-R_univ = 8314 # 一般気体定数 [J/mol-K]
+R_univ = 8314 # 一般気体定数 [mJ/mol-K]
 Pa = 0.1013   # 大気圧 [MPa]
 
 class RocketSimulation:
@@ -116,9 +116,6 @@ class RocketSimulation:
             self.Ae_new = (self.Pthroat_tmp1/self.Pa) ** (1/self.gamma_tmp1) * (1/self.Me_new) * self.At_new
             self.epsilon_new = self.Ae_new / self.At_new
 
-            # 出口面積
-            # self.Ae_new = self.At_new * self.epsilon_new
-
             #推力計算
             self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_def
             self.F = self.CF_tmp1 * self.Cstar_tmp1 * self.eta * self.mdot_new
@@ -183,7 +180,6 @@ class RocketSimulation:
         log.append("-------------")
 
         # 最終結果terminal出力
-        # todo：jsoncと並べ方をそろえる
         print("-------------")
         print("Thrust(input value) = ", self.F, "[N]")
         print("chamber pressure(input value) = ", self.Pc_def, "[MPa]")
@@ -209,12 +205,9 @@ class RocketSimulation:
         for i in range(len(self.cd_values)):
             self.kstar_cd_list = np.append(self.kstar_cd_list, np.sqrt(4*self.Kstar / (self.cd_values[i] * math.pi)))
 
-        print("END simulation")
-        return "\n".join(log), self.kstar_cd_list, self.cd_values
+        print("END initial condition simulation")
 
-    # resultのグラフ呼び出し関数
-    def get_iteration_plot_base64(self, Dovalue, cdvalue):
-        return self.iter_logger.get_base64_plot(Dovalue, cdvalue)
+        return "\n".join(log), self.kstar_cd_list, self.cd_values
 
     # 時間発展計算
     def integration_simulation(self, Pc, Df, OF, eta_cstar, eta_nozzle, Kstar, epsilon,
@@ -383,10 +376,17 @@ class RocketSimulation:
         print("Df_init = ", Df * 1000, "[mm]")
         print("Df_final = ", self.Df * 1000, "[mm]")
         print("F_ave =", self.It * 1000 / self.k, "[N]")
+        print("end time evolution simulation")
         time_ms = list(range(len(self.F_arr)))
         evolution_result = np.stack([self.F_arr, self.F_fte_arr, self.Pt_arr, self.Pc_int_arr, self.OF_arr, self.mdot_arr, self.Df_arr, self.Cstar_arr, self.CF_arr, self.M_ox_arr, self.mdot_ox_arr, self.gamma_arr]).T
         return time_ms, self.F_arr, self.F_fte_arr, self.OF_arr, self.Cstar_arr, self.Pc_int_arr, self.Pt_arr, evolution_result, self.It
     
-    # GUIでグラフを書くためだけに存在する関数
+    # GUIでグラフを書くためだけに存在する関数たち
+
+    # 初期条件のresultでの収束例歴表示関数
+    def get_iteration_plot_base64(self, Dovalue, cdvalue):
+        return self.iter_logger.get_base64_plot(Dovalue, cdvalue)
+
+    # 時間発展のresultでの結果表示関数
     def get_evolution_plot_base64(self, time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr):
         return IterationLogger.plot_time_series(time_ms, F_arr, F_fte_arr, OF_arr, Cstar_arr, Pc_arr, Pt_arr)

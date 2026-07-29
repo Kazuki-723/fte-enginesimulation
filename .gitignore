@@ -180,6 +180,7 @@ cython_debug/
 .out
 .zip
 .jsonc
+.yaml
 
 /data
 /inputdatas

@@ -1,6 +1,6 @@
 import numpy as np
 import math
-# from inputprograms.cea_interface import CEAInterface
+from inputprograms.cea_interface import CEAInterface
 from inputprograms.iteration_logger import IterationLogger
 from inputprograms.interp_density import OxidizerDatabase
 
@@ -50,7 +50,7 @@ class RocketSimulation:
         self.T_c_tmp1 = chamber_props["T"]
         self.T_t_tmp1 = throat_props["T"]
         self.T_e_tmp1 = exit_props["T"]
-        self.Mole_tmp1 = exit_props["M"]
+        self.Mole_tmp1 = chamber_props["M"]
         self.Pthroat_tmp1 = throat_props["P"] / 1e6 # MPaに直す
         self.Pe_tmp1 = exit_props["P"] / 1e6 # MPaに直す
         self.Mach_tmp1 = exit_props["Mach"]
@@ -86,7 +86,7 @@ class RocketSimulation:
         #  self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, epsilon=3)
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
         self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, epsilon=0) 
+        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, epsilon=3) 
         
         
         # CEA入力明示

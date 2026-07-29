@@ -66,8 +66,8 @@ def nozzle_flow(gas, P_chamber, P_exit, gas_origin, const, mode=0):
         gas, derivs[0], derivs[1], derivs[2]
     )
     throat_props = {
-        "T": gas_throat.T,
-        "P": gas_throat.P,
+        "T": T_throat,
+        "P": P_throat,
         "rho": gas_throat.density,
         "H": gas_throat.enthalpy_mass/1000,
         "U": gas_throat.int_energy_mass/1000,
@@ -93,6 +93,10 @@ def nozzle_flow(gas, P_chamber, P_exit, gas_origin, const, mode=0):
     dlogV_dlogT_P, dlogV_dlogP_T, cp, gamma_s = k.get_thermo_properties(
         gas, derivs[0], derivs[1], derivs[2]
     )
+
+    # calculate from EOS
+    P_exit_calc = gas_exit.density * ct.gas_constant * T_exit / gas_exit.mean_molecular_weight
+
     exit_props = {
         "T": T_exit,
         "P": P_exit_calc,

@@ -75,7 +75,7 @@ def nozzle_flow(gas, P_chamber, P_exit, gas_origin, const, mode=0):
         "S": gas_throat.entropy_mass/1000,
         "M": gas_throat.mean_molecular_weight,
         "Cp": cp/1000,
-        "Gamma": gamma,
+        "Gamma": gamma_s,
         "a": gas_throat.sound_speed,
         "Mach": 1.0
     }
@@ -103,7 +103,7 @@ def nozzle_flow(gas, P_chamber, P_exit, gas_origin, const, mode=0):
         "S": gas_exit.entropy_mass/1000,
         "M": gas_exit.mean_molecular_weight,
         "Cp": cp/1000,
-        "Gamma": gamma,
+        "Gamma": gamma_s,
         "a": gas_exit.sound_speed,
         "Mach": M_exit
     }

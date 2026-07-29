@@ -1,6 +1,6 @@
 import numpy as np
 import cantera as ct
-from input import kyleniemeyer as k
+from inputprograms import kyleniemeyer as k
 
 def nozzle_flow(gas, P_chamber, P_exit, gas_origin, const, mode=0):
     """

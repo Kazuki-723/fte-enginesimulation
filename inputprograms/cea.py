@@ -1,7 +1,7 @@
 import cantera as ct
 import numpy as np
-from input import kyleniemeyer as k
-from input.nozzle import nozzle_flow
+from inputprograms import kyleniemeyer as k
+from inputprograms.nozzle import nozzle_flow
 
 def CEA(O_F, T_init, P_init):
     # O/F指定（酸化剤/燃料の質量比）
@@ -17,7 +17,7 @@ def CEA(O_F, T_init, P_init):
 
     # GRI-Mech + PMMA拡張の統合
     gri = ct.Solution('gri30.yaml')
-    pmma = ct.Solution('input/pmma_extensionV3.yaml')
+    pmma = ct.Solution('inputprograms/pmma_extensionV3.yaml')
 
     gri_species_names = {sp.name for sp in gri.species()}
     pmma_species_filtered = [sp for sp in pmma.species() if sp.name not in gri_species_names]

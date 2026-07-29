@@ -21,9 +21,12 @@ CLIは適当な環境でも動作確認済み．
 - numpy 2.3.4
 - pandas 2.3.3
 - scipy 1.16.3
+- cantera 3.2.0
 
 標準ライブラリについては，csv, re, base64, io, math, os, subprocessを使用している．
-一部windows標準コマンドを実行しているためおそらくwindows以外は非対応(未確認)．
+一部windows標準コマンドを実行しているためおそらくwindows以外は非対応．
+
+Windows以外については，ct-cea-developから，ct-cea版を使用してもらえればPython内部で完結するように組んだので動くと思われる(未確認)．
 
 ## 実行まで
 環境構築を行ったうえで，実際に実行するまでの手順をまとめる．

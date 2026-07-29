@@ -173,15 +173,15 @@ cython_debug/
 
 #自家追加分
 *.csv
-.mp4
-.png
-.gif
-.inp
-.out
-.zip
-.jsonc
-.yaml
-.xlsx
+*.mp4
+*.png
+*.gif
+*.inp
+*.out
+*.zip
+*.jsonc
+*.yaml
+*.xlsx
 
 /data
 /inputdatas

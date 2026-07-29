@@ -94,8 +94,8 @@ def nozzle_flow(gas, P_chamber, P_exit, gas_origin, const, mode=0):
         gas, derivs[0], derivs[1], derivs[2]
     )
     exit_props = {
-        "T": gas_exit.T,
-        "P": gas_exit.P,
+        "T": T_exit,
+        "P": P_exit_calc,
         "rho": gas_exit.density,
         "H": gas_exit.enthalpy_mass/1000,
         "U": gas_exit.int_energy_mass/1000,

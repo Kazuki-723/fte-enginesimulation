@@ -181,6 +181,7 @@ cython_debug/
 .zip
 .jsonc
 .yaml
+.xlsx
 
 /data
 /inputdatas

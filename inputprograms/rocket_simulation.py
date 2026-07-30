@@ -19,7 +19,7 @@ class RocketSimulation:
         self.ox_db = OxidizerDatabase()
         self.iter_logger = IterationLogger()
         self.diffuse_deg = 12 #ディフューザーの拡大角[deg]
-        self.T_init = 300 # cantera計算時の初期温度[K]
+        self.T_init = 290 # cantera計算時の初期温度[K]
 
         # 積分計算用の配列初期化
         self.Pt_arr = np.array([])
@@ -146,11 +146,11 @@ class RocketSimulation:
             self.At_new = self.eta_cstar * self.Cstar_tmp1 * self.mdot_new / (self.Pc_def * 10 ** 6)
             
             # 出口マッハ数
-            self.Me_new = np.sqrt(2 * self.R_tmp1 * self.T_c_tmp1 * (self.gamma_tmp1/(self.gamma_tmp1-1)) * (1- (self.Pe_tmp1/self.Pc_def)**((self.gamma_tmp1-1)/self.gamma_tmp1))) / \
-            np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
+            # self.Me_new = np.sqrt(2 * self.R_tmp1 * self.T_c_tmp1 * (self.gamma_tmp1/(self.gamma_tmp1-1)) * (1- (self.Pe_tmp1/self.Pc_def)**((self.gamma_tmp1-1)/self.gamma_tmp1))) / \
+            # np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
 
             # 開口比、出口面積
-            self.Ae_new = (self.Pthroat_tmp1/self.Pa) ** (1/self.gamma_tmp1) * (1/self.Me_new) * self.At_new
+            self.Ae_new = (self.Pthroat_tmp1/self.Pa) ** (1/self.gamma_tmp1) * (1/self.Mach_tmp1) * self.At_new
             self.epsilon_new = self.Ae_new / self.At_new
 
             #推力計算
@@ -192,7 +192,7 @@ class RocketSimulation:
         self.OF_tmp1 = self.mdot_ox_init / self.mdot_f_init
 
         # 定義したOFを実現するのに必要な燃焼面積
-        # ここで，有効長さモデルなどは定義せずに単純に計算している
+        # ここで算出されるのは有効長さ
         self.Ap_req = self.mdot_f_init / (self.rho_f_start * self.a_ox * ((4 * self.mdot_ox_init) / (math.pi * self.Df_init ** 2)) ** self.n_ox)
         
         # Dfから燃料長さを計算

@@ -2,13 +2,15 @@ import numpy as np
 import cantera as ct
 from inputprograms import kyleniemeyer as k
 
-def nozzle_flow(gas, P_chamber, P_exit, gas_origin, const, mode=0):
+def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode=0):
     """
     等エントロピー展開を仮定したCDノズルのスロート・出口状態を計算し、
     CanteraでTP再計算して物性を出力する
 
     Parameters
     ----------
+    chamber_props : Dict
+        燃焼室平衡後の値を格納している子
     gas : ct.Solution
         燃焼室平衡後のgasオブジェクト
     P_chamber : float
@@ -28,7 +30,7 @@ def nozzle_flow(gas, P_chamber, P_exit, gas_origin, const, mode=0):
     R = ct.gas_constant / gas.mean_molecular_weight
 
     # スロート条件（M=1）
-    T_throat = gas.T * (2 / (gamma + 1))
+    T_throat = chamber_props["T"] * (2 / (gamma + 1))
     P_throat = P_chamber * (2 / (gamma + 1)) ** (gamma / (gamma - 1))
 
     # 出口条件
@@ -51,7 +53,7 @@ def nozzle_flow(gas, P_chamber, P_exit, gas_origin, const, mode=0):
             if abs(f(M_exit)) < 1e-8:
                 break
 
-    T_exit = gas.T / (1 + (gamma - 1) / 2 * M_exit ** 2)
+    T_exit = chamber_props["T"] / (1 + (gamma - 1) / 2 * M_exit ** 2)
     P_exit_calc = P_chamber * (1 + (gamma - 1) / 2 * M_exit ** 2) ** (-gamma / (gamma - 1))
 
     # throat状態をCanteraで再計算
@@ -61,9 +63,9 @@ def nozzle_flow(gas, P_chamber, P_exit, gas_origin, const, mode=0):
     gas_throat.equilibrate('HP')
     gas_throat.TP = T_throat, P_throat
     gas_throat.equilibrate('SP')
-    derivs = k.get_thermo_derivatives(gas)
+    derivs = k.get_thermo_derivatives(gas_throat)
     dlogV_dlogT_P, dlogV_dlogP_T, cp, gamma_s = k.get_thermo_properties(
-        gas, derivs[0], derivs[1], derivs[2]
+        gas_throat, derivs[0], derivs[1], derivs[2]
     )
     throat_props = {
         "T": T_throat,
@@ -89,13 +91,14 @@ def nozzle_flow(gas, P_chamber, P_exit, gas_origin, const, mode=0):
     gas_exit.equilibrate('HP')
     gas_exit.TP = T_exit, P_exit_calc
     gas_exit.equilibrate('SP')
-    derivs = k.get_thermo_derivatives(gas)
+    derivs = k.get_thermo_derivatives(gas_exit)
     dlogV_dlogT_P, dlogV_dlogP_T, cp, gamma_s = k.get_thermo_properties(
-        gas, derivs[0], derivs[1], derivs[2]
+        gas_exit, derivs[0], derivs[1], derivs[2]
     )
 
     # calculate from EOS
-    P_exit_calc = gas_exit.density * ct.gas_constant * T_exit / gas_exit.mean_molecular_weight
+    T_exit = chamber_props["T"] / (1 + ((gamma_s - 1) / 2 * M_exit ** 2))
+    P_exit_calc =  gas_exit.density * ct.gas_constant * T_exit / gas_exit.mean_molecular_weight
 
     exit_props = {
         "T": T_exit,

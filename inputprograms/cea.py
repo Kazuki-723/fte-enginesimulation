@@ -71,7 +71,7 @@ def CEA(O_F, T_init, P_init, epsilon):
     const = {"Cstar": Cstar, "gamma": gamma_s}
 
 
-    throat_props, exit_props, throat_perf, exit_perf = nozzle_flow(gas, P_chamber, P_exit, gas_origin, const, mode = epsilon)
+    throat_props, exit_props, throat_perf, exit_perf = nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode = epsilon)
 
     # print("---input---")
     # print("OF = ", O_F,"[-]")

@@ -3,7 +3,7 @@ import numpy as np
 from inputprograms import kyleniemeyer as k
 from inputprograms.nozzle import nozzle_flow
 
-def CEA(O_F, T_init, P_init, epsilon):
+def CEA(O_F, T_init, P_init, epsilon, nfz = 2):
     # O/F指定（酸化剤/燃料の質量比）
     O_F = O_F
 
@@ -70,8 +70,15 @@ def CEA(O_F, T_init, P_init, epsilon):
     # 定数固定する値の指定
     const = {"Cstar": Cstar, "gamma": gamma_s}
 
+    # 反応流凍結制御
+    """
+    1：燃焼室凍結(未実装)
+    2：スロート凍結
+    3：全反応流
+    """
+    nfz_nozzle = nfz
 
-    throat_props, exit_props, throat_perf, exit_perf = nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode = epsilon)
+    throat_props, exit_props, throat_perf, exit_perf = nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode = epsilon, nfz = nfz_nozzle)
 
     # print("---input---")
     # print("OF = ", O_F,"[-]")

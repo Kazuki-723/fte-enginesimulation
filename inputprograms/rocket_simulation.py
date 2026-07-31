@@ -41,10 +41,12 @@ class RocketSimulation:
     
     # cantera計算からCEA結果調整
     def ctcea_compute(self, OF, T_init, P_init, epsilon):
-        chamber_props, throat_props, exit_props, throat_perf, exit_perf = cea.CEA(OF, T_init, P_init, epsilon)
+        # ノズル内の凍結流定義．基本は2
+        nfz = 2
+        chamber_props, throat_props, exit_props, throat_perf, exit_perf = cea.CEA(OF, T_init, P_init, epsilon, nfz)
 
         #大結果シュート大会
-        self.gamma_tmp1 = exit_props['Gamma']
+        self.gamma_tmp1 = chamber_props['Gamma']
         self.Cstar_tmp1 = exit_perf['Cstar']
         self.CF_tmp1 = exit_perf['Cf']
         self.T_c_tmp1 = chamber_props["T"]
@@ -86,7 +88,7 @@ class RocketSimulation:
         #  self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, epsilon=3)
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
         self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, epsilon=3) 
+        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, epsilon=0) 
         
         
         # CEA入力明示

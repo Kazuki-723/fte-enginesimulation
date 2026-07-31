@@ -76,17 +76,14 @@ def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode=0
 
         # 出口マッハ数の確定
         # mode != 0で開口比から計算
-        if mode != 0:   # mode = ε（開口比指定）
+        if mode != 0:   # mode = epsilon（開口比指定）
             Ae_At_target = mode  # 指定開口比
 
             # 初期推定
             P_exit = ct.one_atm
 
             def compute_Ae_At_from_pressure(P_trial):
-                """
-                既存の nfz==2 のロジックを使って、
-                仮の出口圧 P_trial を与えたときの Ae/At を計算する関数。
-                """
+                # 仮の出口圧 P_trial を与えたときの Ae/At を計算する
                 def exit_temperture_calc(T):
                     gas_exit_frozen.TP = T, P_trial
                     return gas_exit_frozen.entropy_mass - entropy_throat
@@ -197,7 +194,6 @@ def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode=0
         }
         exit_perf = nozzle_performance(exit_props["Gamma"], R, exit_props["T"],
                                     P_chamber, exit_props["P"], ct.one_atm, exit_props["Mach"], const["Cstar"])
-
     # ここからnfz =3
     # 出口条件
     elif nfz == 3:

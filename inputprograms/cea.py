@@ -79,45 +79,4 @@ def CEA(O_F, T_init, P_init, epsilon, nfz = 2):
     nfz_nozzle = nfz
 
     throat_props, exit_props, throat_perf, exit_perf = nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode = epsilon, nfz = nfz_nozzle)
-
-    # print("---input---")
-    # print("OF = ", O_F,"[-]")
-    # print("Pc = ",P_init / (10 * ct.one_atm),"[MPa]")
-    # print("initial Temp.",T_init,"[K]")
-
-    # print("------------------------------------------------------------")
-    # print("Chamber vs Throat vs Exit (CEA-style)")
-    # print("------------------------------------------------------------")
-    # print(f"{'Property':<20}{'Chamber':>15}{'Throat':>15}{'Exit':>15}")
-    # print(f"{'P [bar]':<20}{chamber_props['P']/ct.one_atm:>15.4f}{results['throat']['P']/ct.one_atm:>15.4f}{results['exit']['P']/ct.one_atm:>15.4f}")
-    # print(f"{'T [K]':<20}{chamber_props['T']:>15.4f}{results['throat']['T']:>15.4f}{results['exit']['T']:>15.4f}")
-    # print(f"{'rho [kg/m^3]':<20}{chamber_props['rho']:>15.4f}{results['throat']['rho']:>15.4f}{results['exit']['rho']:>15.4f}")
-    # print(f"{'H [kJ/kg]':<20}{chamber_props['H']:>15.4f}{results['throat']['H']:>15.4f}{results['exit']['H']:>15.4f}")
-    # print(f"{'U [kJ/kg]':<20}{chamber_props['U']:>15.4f}{results['throat']['U']:>15.4f}{results['exit']['U']:>15.4f}")
-    # print(f"{'G [kJ/kg]':<20}{chamber_props['G']:>15.4f}{results['throat']['G']:>15.4f}{results['exit']['G']:>15.4f}")
-    # print(f"{'S [kJ/kg/K]':<20}{chamber_props['S']:>15.4f}{results['throat']['S']:>15.4f}{results['exit']['S']:>15.4f}")
-    # print(f"{'M [1/n]':<20}{chamber_props['M']:>15.4f}{results['throat']['M']:>15.4f}{results['exit']['M']:>15.4f}")
-    # print(f"{'Cp [kJ/kg/K]':<20}{chamber_props['Cp']:>15.4f}{results['throat']['Cp']:>15.4f}{results['exit']['Cp']:>15.4f}")
-    # print(f"{'Gamma [-]':<20}{chamber_props['Gamma']:>15.4f}{results['throat']['Gamma']:>15.4f}{results['exit']['Gamma']:>15.4f}")
-    # print(f"{'Sonic Vel. [m/s]':<20}{chamber_props['a']:>15.4f}{results['throat']['a']:>15.4f}{results['exit']['a']:>15.4f}")
-    # print(f"{'Mach number':<20}{chamber_props['Mach']:>15.4f}{results['throat']['Mach']:>15.4f}{results['exit']['Mach']:>15.4f}")
-    # print("------------------------------------------------------------")
-
-    # print("------------------------------------------------------------")
-    # print("Performance Parameters")
-    # print("------------------------------------------------------------")
-    # print(f"{'Property':<15}{'Throat':>15}{'Exit':>15}")
-    # print(f"{'Ae/At':<15}{throat_perf['Ae/At']:>15.4f}{exit_perf['Ae/At']:>15.4f}")
-    # print(f"{'Cstar [m/s]':<15}{throat_perf['Cstar']:>15.2f}{exit_perf['Cstar']:>15.2f}")
-    # print(f"{'Cf':<15}{throat_perf['Cf']:>15.4f}{exit_perf['Cf']:>15.4f}")
-    # print(f"{'Ivac [m/s]':<15}{throat_perf['Ivac']:>15.2f}{exit_perf['Ivac']:>15.2f}")
-    # print(f"{'Isp [s]':<15}{throat_perf['Isp']:>15.2f}{exit_perf['Isp']:>15.2f}")
-    # print("------------------------------------------------------------")
-
-    # 組成表示（濃度が高い種のみ）
-    # for sp in gas.species_names:
-    #     X = gas.X[gas.species_index(sp)]
-    #     if X > 5e-6:
-    #         print(f"{sp}: {X:.6f}")
-    
     return chamber_props, throat_props, exit_props, throat_perf, exit_perf

@@ -40,10 +40,10 @@ class RocketSimulation:
         return phase, rho
     
     # cantera計算からCEA結果調整
-    def ctcea_compute(self, OF, T_init, P_init, epsilon):
+    def ctcea_compute(self, OF, T_init, P_init, epsilon, gas_origin):
         # ノズル内の凍結流定義．基本は2
         nfz = 2
-        chamber_props, throat_props, exit_props, throat_perf, exit_perf = cea.CEA(OF, T_init, P_init, epsilon, nfz)
+        chamber_props, throat_props, exit_props, throat_perf, exit_perf = cea.CEA(OF, T_init, P_init, epsilon, gas_origin, nfz)
 
         #大結果シュート大会
         self.gamma_tmp1 = chamber_props['Gamma']
@@ -82,13 +82,16 @@ class RocketSimulation:
         self.a_ox = a_ox
         self.n_ox = n_ox
 
+        # cantera初期化
+        gas_origin = cea.Mech_init()
+
         # 最適epsilon調整
         # (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
         #  self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
         #  self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, epsilon=3)
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
         self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, epsilon=0) 
+        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, 0, gas_origin) 
         
         
         # CEA入力明示
@@ -111,7 +114,7 @@ class RocketSimulation:
         
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
         self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, self.epsilon_new) 
+        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, self.epsilon_new, gas_origin)
 
         # iteration設定
         self.Pe_old = self.Pe_tmp1
@@ -138,7 +141,7 @@ class RocketSimulation:
             
             (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
             self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-            self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, self.epsilon_new) 
+            self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, self.epsilon_new, gas_origin) 
 
             # 出口速度計算
             self.R_tmp1 = self.R_univ / self.Mole_tmp1
@@ -275,6 +278,9 @@ class RocketSimulation:
         self.Dt = Dt
         self.Ae_new = math.pi / 4 * self.Dt ** 2 * self.epsilon_new
 
+        # cantera初期化
+        gas_origin = cea.Mech_init()
+
         # 必要値の定義
         self.Pa_tmp1 = Pa
         self.mdot_ox_init = (self.OF_tmp1 / (self.OF_tmp1 + 1)) * self.mdot_start  # 初期酸化剤流量[kg/s]
@@ -307,7 +313,7 @@ class RocketSimulation:
         
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
         self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new) 
+        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new, gas_origin) 
 
         # log配列
         self.OX = self.Mass_ox
@@ -364,7 +370,7 @@ class RocketSimulation:
             
             (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
             self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-            self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new) 
+            self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new, gas_origin) 
 
             # 気体物性値評価
             self.R_tmp1 = self.R_univ / self.Mole_tmp1  # 気体定数

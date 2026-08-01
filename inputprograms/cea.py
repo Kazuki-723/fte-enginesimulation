@@ -4,7 +4,20 @@ import warnings
 from inputprograms import kyleniemeyer as k
 from inputprograms.nozzle import nozzle_flow
 
-def CEA(O_F, T_init, P_init, epsilon, nfz = 2):
+def Mech_init():
+    # GRI-Mech + PMMA拡張の統合
+    gri = ct.Solution('gri30.yaml')
+    pmma = ct.Solution('inputprograms/pmma_extensionV3.yaml')
+
+    gri_species_names = {sp.name for sp in gri.species()}
+    pmma_species_filtered = [sp for sp in pmma.species() if sp.name not in gri_species_names]
+
+    gas_origin = ct.Solution(thermo='ideal-gas',
+                    species=gri.species() + pmma_species_filtered,
+                    reactions=gri.reactions() + pmma.reactions())
+    return gas_origin
+
+def CEA(O_F, T_init, P_init, epsilon, gas_origin, nfz = 2):
     # 温度上限のUserwarningを消す
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning)
@@ -20,16 +33,16 @@ def CEA(O_F, T_init, P_init, epsilon, nfz = 2):
         Y_PMMA = mass_PMMA / total_mass
         Y_N2O = mass_N2O / total_mass
 
-        # GRI-Mech + PMMA拡張の統合
-        gri = ct.Solution('gri30.yaml')
-        pmma = ct.Solution('inputprograms/pmma_extensionV3.yaml')
+        # # GRI-Mech + PMMA拡張の統合
+        # gri = ct.Solution('gri30.yaml')
+        # pmma = ct.Solution('inputprograms/pmma_extensionV3.yaml')
 
-        gri_species_names = {sp.name for sp in gri.species()}
-        pmma_species_filtered = [sp for sp in pmma.species() if sp.name not in gri_species_names]
+        # gri_species_names = {sp.name for sp in gri.species()}
+        # pmma_species_filtered = [sp for sp in pmma.species() if sp.name not in gri_species_names]
 
-        gas_origin = ct.Solution(thermo='ideal-gas',
-                        species=gri.species() + pmma_species_filtered,
-                        reactions=gri.reactions() + pmma.reactions())
+        # gas_origin = ct.Solution(thermo='ideal-gas',
+        #                 species=gri.species() + pmma_species_filtered,
+        #                 reactions=gri.reactions() + pmma.reactions())
         gas = gas_origin
         # 初期条件（燃焼室）
         T_init = T_init
@@ -46,13 +59,11 @@ def CEA(O_F, T_init, P_init, epsilon, nfz = 2):
 
         derivs = k.get_thermo_derivatives(gas)
 
-        dlogV_dlogT_P, dlogV_dlogP_T, cp, gamma_s = k.get_thermo_properties(
+        _, _, cp, gamma_s = k.get_thermo_properties(
             gas, derivs[0], derivs[1], derivs[2]
             )
 
         Cstar = np.sqrt((ct.gas_constant * gas.T / (gas.mean_molecular_weight * gamma_s)) * ((gamma_s + 1) / 2) ** ((gamma_s + 1) / (gamma_s - 1)))
-        rho_calc = P_init * gas.mean_molecular_weight / (ct.gas_constant * gas.T)
-        speed_sound = np.sqrt(ct.gas_constant * gas.T * gamma_s / gas.mean_molecular_weight)
 
         chamber_props = {
             "T": gas.T,

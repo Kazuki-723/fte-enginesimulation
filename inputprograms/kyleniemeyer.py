@@ -62,7 +62,7 @@ def get_thermo_derivatives(gas):
     try:
         derivs = np.linalg.solve(coeff_matrix, right_hand_side)
     except np.linalg.LinAlgError:
-        # print("⚠️ Singular matrix detected, switching to least-squares solution.")
+        # print("Singular matrix detected, switching to least-squares solution.")
         derivs, *_ = np.linalg.lstsq(coeff_matrix, right_hand_side, rcond=None)
 
 

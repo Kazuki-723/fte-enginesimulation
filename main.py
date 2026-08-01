@@ -1,4 +1,5 @@
 import csv
+import time 
 from inputprograms.rocket_simulation import RocketSimulation
 from inputprograms.importjson import JsoncLoader
 sim = RocketSimulation()
@@ -17,6 +18,9 @@ def run_initial_condition_mode():
     except Exception as e:
         print(f"loading error: {e}")
         exit(1)
+
+    # 実行時間計測(初期設定に依存するのでsampleに対する参考値)
+    start = time.perf_counter()
 
     print("loading values:")
     for key, val in inputvalues.items():
@@ -45,6 +49,9 @@ def run_initial_condition_mode():
         rho_ox_init, rho_f_start, a_ox, n_ox
     )
 
+    end = time.perf_counter()
+    print(f"Elapsed time: {end - start:.6f} seconds")
+
 # -------------------------
 # 時間発展計算モード
 # -------------------------
@@ -59,6 +66,9 @@ def run_time_evolution_mode():
     except Exception as e:
         print(f"loading error: {e}")
         exit(1)
+
+    # 実行時間計測
+    start = time.perf_counter()
 
     print("loading values:")
     for key, val in inputvalues.items():
@@ -90,6 +100,10 @@ def run_time_evolution_mode():
         Pc=Pc, Df=Df, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,
         epsilon=epsilon, Lf=Lf, mdot=mdot, V_tank=V_tank, P_init=P_init, P_final=P_final,
         rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, F=F, Dt=Dt)
+
+    # 計算本体の時間をはかる
+    end = time.perf_counter()
+    print(f"Elapsed time: {end - start:.6f} seconds")
     
     # 結果出力
     print("input output csv filename(example.csv):")

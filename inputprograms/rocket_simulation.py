@@ -23,16 +23,19 @@ class RocketSimulation:
         self.T_init = 290 # cantera計算時の初期温度[K]
 
         # 積分計算用の配列初期化
-        self.Pt_arr = np.array([])
-        self.Pc_int_arr = np.array([])
-        self.F_arr = np.array([])
-        self.OF_arr = np.array([])
-        self.Ap_arr = np.array([])
-        self.mdot_arr = np.array([])
-        self.Cstar_arr = np.array([])
-        self.CF_arr = np.array([])
-        self.F_fte_arr = np.array([])
-        self.M_ox_arr = np.array([])
+        self.Pt_arr = []
+        self.Pc_int_arr = []
+        self.F_arr = []
+        self.OF_arr = []
+        self.Ap_arr = []
+        self.mdot_arr = []
+        self.Cstar_arr = []
+        self.CF_arr = []
+        self.F_fte_arr = []
+        self.M_ox_arr = []
+        self.mdot_ox_arr = []
+        self.gamma_arr = []
+        self.Df_arr = []
         self.kstar_cd_list = np.array([])
 
     # Ptからrho_oxを計算
@@ -41,9 +44,9 @@ class RocketSimulation:
         return phase, rho
     
     # cantera計算からCEA結果調整
-    def ctcea_compute(self, OF, T_init, P_init, epsilon, gas_origin):
+    def ctcea_compute(self, OF, T_init, P_init, epsilon, gas_origin, stoich_coeffs):
         # ノズル内の凍結流定義．基本は2
-        chamber_props, throat_props, exit_props, _, exit_perf = cea.CEA(OF, T_init, P_init, epsilon, gas_origin, nfz = 2)
+        chamber_props, throat_props, exit_props, _, exit_perf = cea.CEA(OF, T_init, P_init, epsilon, gas_origin, stoich_coeffs, nfz = 2)
 
         #大結果シュート大会
         self.gamma_tmp1 = chamber_props['Gamma']
@@ -83,12 +86,12 @@ class RocketSimulation:
         self.n_ox = n_ox
 
         # cantera初期化
-        gas_origin = cea.Mech_init()
+        gas_origin, stoich_coeffs = cea.Mech_init()
 
         # 最適epsilon調整
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
         self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, 0, gas_origin) 
+        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, 0, gas_origin, stoich_coeffs) 
         
         # CEA入力明示
         print(self.gamma_tmp1)
@@ -106,7 +109,7 @@ class RocketSimulation:
         # 初期CEA計算        
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
         self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, self.epsilon_new, gas_origin)
+        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, self.epsilon_new, gas_origin, stoich_coeffs)
 
         # iteration設定
         self.Pe_old = self.Pe_tmp1
@@ -130,7 +133,7 @@ class RocketSimulation:
             # CEAによる計算
             (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
             self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-            self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, self.epsilon_new, gas_origin) 
+            self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, self.epsilon_new, gas_origin, stoich_coeffs) 
 
             # 出口速度計算
             self.R_tmp1 = self.R_univ / self.Mole_tmp1
@@ -265,7 +268,7 @@ class RocketSimulation:
         self.Ae_new = math.pi / 4 * self.Dt ** 2 * self.epsilon_new
 
         # cantera初期化
-        gas_origin = cea.Mech_init()
+        gas_origin, stoich_coeffs = cea.Mech_init()
 
         # 必要値の定義
         self.Pa_tmp1 = Pa
@@ -295,23 +298,23 @@ class RocketSimulation:
         # 初期状態CEA
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
         self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new, gas_origin) 
+        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new, gas_origin, stoich_coeffs) 
 
         # log配列
         self.OX = self.Mass_ox
-        self.Pt_arr = np.array([self.Ptank_tmp1])
-        self.Pc_int_arr = np.array([self.Pc_tmp1])
-        self.F_arr = np.array([self.F])
-        self.OF_arr = np.array([self.OF_tmp1])
-        self.Ap_arr = np.array([self.Ap_req])
-        self.mdot_arr = np.array([self.mdot_ox_init + self.mdot_f_init])
-        self.Cstar_arr = np.array([self.Cstar_tmp1])
-        self.CF_arr = np.array([self.CF_tmp1])
-        self.F_fte_arr = np.array([self.F])
-        self.M_ox_arr = np.array([self.Mass_ox_remain])
-        self.mdot_ox_arr = np.array([self.mdot_ox_init])
-        self.gamma_arr = np.array([self.gamma_tmp1])
-        self.Df_arr = np.array([self.Df])
+        self.Pt_arr.append(self.Ptank_tmp1)
+        self.Pc_int_arr.append(self.Pc_tmp1)
+        self.F_arr.append(self.F)
+        self.OF_arr.append(self.OF_tmp1)
+        self.Ap_arr.append(self.Ap_req)
+        self.Df_arr.append(self.Df)
+        self.mdot_arr.append(self.mdot_ox_init + self.mdot_f_init)
+        self.Cstar_arr.append(self.Cstar_tmp1)
+        self.CF_arr.append(self.CF_tmp1)
+        self.F_fte_arr.append(self.F)
+        self.M_ox_arr.append(self.Mass_ox_remain)
+        self.mdot_ox_arr.append(self.mdot_ox_init)
+        self.gamma_arr.append(self.gamma_tmp1)
 
         print("epsilon_new = ", self.epsilon_new)
 
@@ -343,7 +346,7 @@ class RocketSimulation:
             # CEA計算
             (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
             self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-            self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new, gas_origin) 
+            self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new, gas_origin, stoich_coeffs) 
 
             # 気体物性値評価
             self.R_tmp1 = self.R_univ / self.Mole_tmp1  # 気体定数
@@ -383,20 +386,20 @@ class RocketSimulation:
             pbar.update(1)  # 進捗を増やす
 
             # 配列管理
-            self.Pt_arr = np.append(self.Pt_arr, self.Ptank_tmp1)
-            self.Pc_int_arr = np.append(self.Pc_int_arr, self.Pc_tmp1)
-            self.F_arr = np.append(self.F_arr, self.F_new)
-            self.OF_arr = np.append(self.OF_arr, self.OF_tmp1)
-            self.Ap_arr = np.append(self.Ap_arr, self.Ap)
-            self.Df_arr = np.append(self.Df_arr, self.Df)
+            self.Pt_arr.append(self.Ptank_tmp1)
+            self.Pc_int_arr.append(self.Pc_tmp1)
+            self.F_arr.append(self.F_new)
+            self.OF_arr.append(self.OF_tmp1)
+            self.Ap_arr.append(self.Ap)
+            self.Df_arr.append(self.Df)
             self.mdot = self.mdot_ox + self.mdot_f
-            self.mdot_arr = np.append(self.mdot_arr, self.mdot)
-            self.Cstar_arr = np.append(self.Cstar_arr, self.Cstar_tmp1)
-            self.CF_arr = np.append(self.CF_arr, self.CF_tmp1)
-            self.F_fte_arr = np.append(self.F_fte_arr, self.F_fte)
-            self.M_ox_arr = np.append(self.M_ox_arr, self.Mass_ox_remain)
-            self.mdot_ox_arr = np.append(self.mdot_ox_arr, self.mdot_ox)
-            self.gamma_arr = np.append(self.gamma_arr, self.gamma_tmp1)
+            self.mdot_arr.append(self.mdot)
+            self.Cstar_arr.append(self.Cstar_tmp1)
+            self.CF_arr.append(self.CF_tmp1)
+            self.F_fte_arr.append(self.F_fte)
+            self.M_ox_arr.append(self.Mass_ox_remain)
+            self.mdot_ox_arr.append(self.mdot_ox)
+            self.gamma_arr.append(self.gamma_tmp1)            
 
             self.It = self.It + self.F_new * 0.001
 

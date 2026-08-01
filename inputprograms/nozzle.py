@@ -3,7 +3,7 @@ import cantera as ct
 #from numba import jit
 from inputprograms import kyleniemeyer as k
 
-def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode=0, nfz = 2):
+def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, stoich_coeffs, mode=0, nfz = 2):
     """
     等エントロピー展開を仮定したCDノズルのスロート・出口状態を計算し、
     CanteraでTP再計算して物性を出力する
@@ -46,9 +46,10 @@ def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode=0
     gas_throat.TP = T_throat, P_throat
     gas_throat.equilibrate('SP')
     X_throat = gas_throat.X
-    derivs = k.get_thermo_derivatives(gas_throat)
+    #stoich_coeffs = k.build_stoich_coeffs(gas_throat)
+    derivs = k.get_thermo_derivatives(gas_throat, stoich_coeffs)
     dlogV_dlogT_P, dlogV_dlogP_T, cp, gamma_s = k.get_thermo_properties(
-        gas_throat, derivs[0], derivs[1], derivs[2]
+        gas_throat, stoich_coeffs, derivs[0], derivs[1], derivs[2]
     )
     throat_props = {
         "T": T_throat,
@@ -227,9 +228,10 @@ def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode=0
         gas_exit.equilibrate('HP')
         gas_exit.TP = T_exit, P_exit_calc
         gas_exit.equilibrate('SP')
-        derivs = k.get_thermo_derivatives(gas_exit)
+        #stoich_coeffs = k.build_stoich_coeffs(gas_exit)
+        derivs = k.get_thermo_derivatives(gas_exit, stoich_coeffs)
         dlogV_dlogT_P, dlogV_dlogP_T, cp, gamma_s = k.get_thermo_properties(
-            gas_exit, derivs[0], derivs[1], derivs[2]
+            gas_exit, stoich_coeffs, derivs[0], derivs[1], derivs[2]
         )
 
         # calculate from EOS

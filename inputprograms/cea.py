@@ -15,9 +15,10 @@ def Mech_init():
     gas_origin = ct.Solution(thermo='ideal-gas',
                     species=gri.species() + pmma_species_filtered,
                     reactions=gri.reactions() + pmma.reactions())
-    return gas_origin
+    stoich_coeffs = k.build_stoich_coeffs(gas_origin)
+    return gas_origin, stoich_coeffs
 
-def CEA(O_F, T_init, P_init, epsilon, gas_origin, nfz = 2):
+def CEA(O_F, T_init, P_init, epsilon, gas_origin, stoich_coeffs, nfz = 2):
     # 温度上限のUserwarningを消す
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning)
@@ -43,10 +44,10 @@ def CEA(O_F, T_init, P_init, epsilon, gas_origin, nfz = 2):
         gas.TP = T_eq, P_init
         gas.equilibrate('SP')
 
-        derivs = k.get_thermo_derivatives(gas)
+        derivs = k.get_thermo_derivatives(gas, stoich_coeffs)
 
         _, _, cp, gamma_s = k.get_thermo_properties(
-            gas, derivs[0], derivs[1], derivs[2]
+            gas, stoich_coeffs, derivs[0], derivs[1], derivs[2]
             )
 
         Cstar = np.sqrt((ct.gas_constant * gas.T / (gas.mean_molecular_weight * gamma_s)) * ((gamma_s + 1) / 2) ** ((gamma_s + 1) / (gamma_s - 1)))
@@ -71,5 +72,5 @@ def CEA(O_F, T_init, P_init, epsilon, gas_origin, nfz = 2):
         # 定数固定する値の指定
         const = {"Cstar": Cstar, "gamma": gamma_s}
 
-        throat_props, exit_props, throat_perf, exit_perf = nozzle_flow(chamber_props, gas, P_init, P_exit, gas_origin, const, mode = epsilon, nfz = nfz)
+        throat_props, exit_props, throat_perf, exit_perf = nozzle_flow(chamber_props, gas, P_init, P_exit, gas_origin, const, stoich_coeffs, mode = epsilon, nfz = nfz)
     return chamber_props, throat_props, exit_props, throat_perf, exit_perf

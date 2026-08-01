@@ -21,10 +21,6 @@ def CEA(O_F, T_init, P_init, epsilon, gas_origin, nfz = 2):
     # 温度上限のUserwarningを消す
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=UserWarning)
-
-        # O/F指定（酸化剤/燃料の質量比）
-        O_F = O_F
-
         # 質量比計算
         mass_PMMA = 1.0
         mass_N2O = mass_PMMA * O_F
@@ -33,19 +29,9 @@ def CEA(O_F, T_init, P_init, epsilon, gas_origin, nfz = 2):
         Y_PMMA = mass_PMMA / total_mass
         Y_N2O = mass_N2O / total_mass
 
-        # # GRI-Mech + PMMA拡張の統合
-        # gri = ct.Solution('gri30.yaml')
-        # pmma = ct.Solution('inputprograms/pmma_extensionV3.yaml')
-
-        # gri_species_names = {sp.name for sp in gri.species()}
-        # pmma_species_filtered = [sp for sp in pmma.species() if sp.name not in gri_species_names]
-
-        # gas_origin = ct.Solution(thermo='ideal-gas',
-        #                 species=gri.species() + pmma_species_filtered,
-        #                 reactions=gri.reactions() + pmma.reactions())
+        # 初期化
         gas = gas_origin
         # 初期条件（燃焼室）
-        T_init = T_init
         P_init = P_init * 10 * ct.one_atm # P_initはMPa想定
 
         gas.TP = T_init, P_init
@@ -80,19 +66,10 @@ def CEA(O_F, T_init, P_init, epsilon, gas_origin, nfz = 2):
             "Mach": 0
         }
 
-        P_chamber = P_init
         P_exit = ct.one_atm  # 大気圧
 
         # 定数固定する値の指定
         const = {"Cstar": Cstar, "gamma": gamma_s}
 
-        # 反応流凍結制御
-        """
-        1：燃焼室凍結(未実装)
-        2：スロート凍結
-        3：全反応流
-        """
-        nfz_nozzle = nfz
-
-        throat_props, exit_props, throat_perf, exit_perf = nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode = epsilon, nfz = nfz_nozzle)
+        throat_props, exit_props, throat_perf, exit_perf = nozzle_flow(chamber_props, gas, P_init, P_exit, gas_origin, const, mode = epsilon, nfz = nfz)
     return chamber_props, throat_props, exit_props, throat_perf, exit_perf

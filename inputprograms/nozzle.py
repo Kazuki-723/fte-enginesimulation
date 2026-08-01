@@ -1,5 +1,6 @@
 import numpy as np
 import cantera as ct
+#from numba import jit
 from inputprograms import kyleniemeyer as k
 
 def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode=0, nfz = 2):
@@ -254,12 +255,10 @@ def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, mode=0
 
     return throat_props, exit_props, throat_perf, exit_perf
 
+#@jit(nopython=True, cache=True)
 def nozzle_performance(gamma, R, T, Pc, Pe, Pa, M, Cstar):
     # 膨張比 Ae/At
     Ae_At = (1/M) * ((2/(gamma+1))*(1+(gamma-1)/2*M**2))**((gamma+1)/(2*(gamma-1)))
-
-    # 特性速度 C*
-    Cstar = Cstar
 
     # 推力係数 Cf
     term1 = np.sqrt((2*gamma**2/(gamma-1)) * (2/(gamma+1))**((gamma+1)/(gamma-1)) * (1-(Pe/Pc)**((gamma-1)/gamma)))

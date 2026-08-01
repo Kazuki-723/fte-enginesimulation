@@ -42,8 +42,7 @@ class RocketSimulation:
     # cantera計算からCEA結果調整
     def ctcea_compute(self, OF, T_init, P_init, epsilon, gas_origin):
         # ノズル内の凍結流定義．基本は2
-        nfz = 2
-        chamber_props, throat_props, exit_props, throat_perf, exit_perf = cea.CEA(OF, T_init, P_init, epsilon, gas_origin, nfz)
+        chamber_props, throat_props, exit_props, throat_perf, exit_perf = cea.CEA(OF, T_init, P_init, epsilon, gas_origin, nfz = 2)
 
         #大結果シュート大会
         self.gamma_tmp1 = chamber_props['Gamma']
@@ -86,13 +85,9 @@ class RocketSimulation:
         gas_origin = cea.Mech_init()
 
         # 最適epsilon調整
-        # (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
-        #  self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        #  self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, epsilon=3)
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
         self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
         self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, 0, gas_origin) 
-        
         
         # CEA入力明示
         print(self.gamma_tmp1)
@@ -107,11 +102,7 @@ class RocketSimulation:
         self.epsilon_new = 1/self.epsilon_new
         print("calculated epsilon = ", self.epsilon_new, "[-]")
 
-        # 初期CEA計算
-        # (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
-        #  self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        #  self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, self.epsilon_new)
-        
+        # 初期CEA計算        
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
         self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
         self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, self.epsilon_new, gas_origin)
@@ -135,10 +126,6 @@ class RocketSimulation:
             self.mdot_old = self.mdot_new
 
             # CEAによる計算
-            # (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
-            #  self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-            #  self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, self.epsilon_new)
-            
             (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
             self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
             self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_def, self.T_init, self.Pc_def, self.epsilon_new, gas_origin) 
@@ -149,10 +136,6 @@ class RocketSimulation:
 
             # スロート断面積計算
             self.At_new = self.eta_cstar * self.Cstar_tmp1 * self.mdot_new / (self.Pc_def * 10 ** 6)
-            
-            # 出口マッハ数
-            # self.Me_new = np.sqrt(2 * self.R_tmp1 * self.T_c_tmp1 * (self.gamma_tmp1/(self.gamma_tmp1-1)) * (1- (self.Pe_tmp1/self.Pc_def)**((self.gamma_tmp1-1)/self.gamma_tmp1))) / \
-            # np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
 
             # 開口比、出口面積
             self.Ae_new = (self.Pthroat_tmp1/self.Pa) ** (1/self.gamma_tmp1) * (1/self.Mach_tmp1) * self.At_new
@@ -307,10 +290,6 @@ class RocketSimulation:
         self.Lf = self.Lf - diseffect_length
 
         # 初期状態CEA
-        # (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1, 
-        #      self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1, 
-        #      self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
-        
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
         self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
         self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new, gas_origin) 
@@ -364,10 +343,6 @@ class RocketSimulation:
             print("OF_tmp1", self.OF_tmp1)
 
             # CEA計算
-            # (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1, 
-            #  self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1, 
-            #  self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
-            
             (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
             self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
             self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new, gas_origin) 

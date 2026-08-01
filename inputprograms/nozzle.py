@@ -46,9 +46,8 @@ def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, stoich
     gas_throat.TP = T_throat, P_throat
     gas_throat.equilibrate('SP')
     X_throat = gas_throat.X
-    #stoich_coeffs = k.build_stoich_coeffs(gas_throat)
     derivs = k.get_thermo_derivatives(gas_throat, stoich_coeffs)
-    dlogV_dlogT_P, dlogV_dlogP_T, cp, gamma_s = k.get_thermo_properties(
+    _, _, cp, gamma_s = k.get_thermo_properties(
         gas_throat, stoich_coeffs, derivs[0], derivs[1], derivs[2]
     )
     throat_props = {
@@ -138,7 +137,7 @@ def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, stoich
                     break
 
             # --- 収束した P_exit で最終状態を計算 ---
-            Ae_At_final, M_exit, T_exit, gamma = compute_Ae_At_from_pressure(P_exit)
+            _, M_exit, T_exit, gamma = compute_Ae_At_from_pressure(P_exit)
 
         # mode = 0で，出口大気圧
         elif mode == 0:
@@ -228,9 +227,8 @@ def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, stoich
         gas_exit.equilibrate('HP')
         gas_exit.TP = T_exit, P_exit_calc
         gas_exit.equilibrate('SP')
-        #stoich_coeffs = k.build_stoich_coeffs(gas_exit)
         derivs = k.get_thermo_derivatives(gas_exit, stoich_coeffs)
-        dlogV_dlogT_P, dlogV_dlogP_T, cp, gamma_s = k.get_thermo_properties(
+        _, _, cp, gamma_s = k.get_thermo_properties(
             gas_exit, stoich_coeffs, derivs[0], derivs[1], derivs[2]
         )
 

@@ -95,20 +95,16 @@ def get_thermo_properties(gas, stoich_coeffs, dpi_dlogT_P, dlogn_dlogT_P, dlogn_
     cp_R = gas.standard_cp_R
     X = gas.X
     MW = gas.mean_molecular_weight
-    ne = gas.n_elements
 
     tot_moles = 1.0 / MW
     moles = X * tot_moles
-    
-    spec_heat_p = ct.gas_constant * (
-        np.sum([dpi_dlogT_P[i] * 
-                np.sum(stoich_coeffs[i,:] * moles * h_RT) 
-                for i in range(ne)
-                ]) +
-        np.sum(moles * h_RT) * dlogn_dlogT_P +
-        np.sum(moles * cp_R) +
-        np.sum(moles * h_RT**2)
-        )
+
+    term1 = dpi_dlogT_P @ (stoich_coeffs @ (moles * h_RT))
+    term2 = (moles @ h_RT) * dlogn_dlogT_P
+    term3 = moles @ cp_R
+    term4 = moles @ (h_RT**2)
+
+    spec_heat_p = ct.gas_constant * (term1 + term2 + term3 + term4)
     
     dlogV_dlogT_P = 1 + dlogn_dlogT_P
     dlogV_dlogP_T = -1 + dlogn_dlogP_T

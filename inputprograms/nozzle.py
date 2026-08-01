@@ -1,6 +1,5 @@
 import numpy as np
 import cantera as ct
-#from numba import jit
 from inputprograms import kyleniemeyer as k
 
 def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, stoich_coeffs, mode=0, nfz = 2):
@@ -42,8 +41,8 @@ def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, stoich
     gas_throat = gas_origin
     gas_throat.TP = T_throat, P_throat
     gas_throat.X = gas.X
-    gas_throat.equilibrate('HP')
-    gas_throat.TP = T_throat, P_throat
+    #gas_throat.equilibrate('HP')
+    #gas_throat.TP = T_throat, P_throat
     gas_throat.equilibrate('SP')
     X_throat = gas_throat.X
     derivs = k.get_thermo_derivatives(gas_throat, stoich_coeffs)
@@ -64,8 +63,10 @@ def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, stoich
         "a": gas_throat.sound_speed,
         "Mach": 1.0
     }
-    throat_perf = nozzle_performance(throat_props["Gamma"], R, throat_props["T"],
-                                P_chamber, throat_props["P"], ct.one_atm, throat_props["Mach"], const["Cstar"])
+    # throat_perf = nozzle_performance(throat_props["Gamma"], R, throat_props["T"],
+    #                             P_chamber, throat_props["P"], ct.one_atm, throat_props["Mach"], const["Cstar"])
+        # 使わなかったのでダミー
+    throat_perf = "dummy"
 
     # nfz = 2でこの先を凍結させる．
     if nfz == 2:
@@ -224,8 +225,8 @@ def nozzle_flow(chamber_props, gas, P_chamber, P_exit, gas_origin, const, stoich
         gas_exit = gas_origin
         gas_exit.TP = T_exit, P_exit_calc
         gas_exit.X = gas.X
-        gas_exit.equilibrate('HP')
-        gas_exit.TP = T_exit, P_exit_calc
+        #gas_exit.equilibrate('HP')
+        #gas_exit.TP = T_exit, P_exit_calc
         gas_exit.equilibrate('SP')
         derivs = k.get_thermo_derivatives(gas_exit, stoich_coeffs)
         _, _, cp, gamma_s = k.get_thermo_properties(

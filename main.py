@@ -4,6 +4,9 @@ from inputprograms.rocket_simulation import RocketSimulation
 from inputprograms.importjson import JsoncLoader
 sim = RocketSimulation()
 
+# import tracemalloc
+# tracemalloc.start(15)
+
 # -------------------------
 # 初期条件計算モード
 # -------------------------
@@ -96,6 +99,7 @@ def run_time_evolution_mode():
     P_final = inputvalues["Pt_end"]
     Dt = inputvalues["Dt"]
 
+    # normal
     (_, _, _, _, _, _, _, evolution_result, _,) = sim.integration_simulation(
         Pc=Pc, Df=Df, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,
         epsilon=epsilon, Lf=Lf, mdot=mdot, V_tank=V_tank, P_init=P_init, P_final=P_final,
@@ -104,7 +108,18 @@ def run_time_evolution_mode():
     # 計算本体の時間をはかる
     end = time.perf_counter()
     print(f"Elapsed time: {end - start:.6f} seconds")
-    
+
+    # snapshot = tracemalloc.take_snapshot()
+    # top_stats = snapshot.statistics('traceback')
+
+    # print("[ Top 10 ]")
+    # for stat in top_stats[:10]:
+    #     print(stat)
+    #     for line in stat.traceback.format():
+    #         print(line)
+    #     print("=====")
+
+        
     # 結果出力
     print("input output csv filename(example.csv):")
     output_filename = input("> ").strip()

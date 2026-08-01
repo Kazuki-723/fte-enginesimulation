@@ -77,7 +77,7 @@ def get_thermo_derivatives(gas, stoich_coeffs):
 
     dpi_dlogT_P = derivs[idx_dpi_dlogT_P : idx_dpi_dlogT_P + ne]
     dlogn_dlogT_P = derivs[idx_dlogn_dlogT_P]
-    dpi_dlogP_T = derivs[idx_dpi_dlogP_T]
+    #dpi_dlogP_T = derivs[idx_dpi_dlogP_T]
     dlogn_dlogP_T = derivs[idx_dlogn_dlogP_T]
 
     # dpi_dlogP_T is not used

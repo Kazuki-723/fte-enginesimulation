@@ -33,15 +33,15 @@ def CEA(O_F, T_init, P_init, epsilon, gas_origin, stoich_coeffs, nfz = 2):
         # 初期化
         gas = gas_origin
         # 初期条件（燃焼室）
-        P_init = P_init * 10 * ct.one_atm # P_initはMPa想定
+        P_calc = P_init * 10 * ct.one_atm # P_initはMPa想定
 
-        gas.TP = T_init, P_init
+        gas.TP = T_init, P_calc
         gas.Y = {'N2O': Y_N2O, 'MMA': Y_PMMA}
 
         # 平衡計算
         gas.equilibrate('HP')
         T_eq = gas.T
-        gas.TP = T_eq, P_init
+        gas.TP = T_eq, P_calc
         gas.equilibrate('SP')
 
         derivs = k.get_thermo_derivatives(gas, stoich_coeffs)
@@ -54,7 +54,7 @@ def CEA(O_F, T_init, P_init, epsilon, gas_origin, stoich_coeffs, nfz = 2):
 
         chamber_props = {
             "T": gas.T,
-            "P": P_init,
+            "P": P_calc,
             "rho": gas.density,
             "H": gas.enthalpy_mass/1000,
             "U": gas.int_energy_mass/1000,
@@ -72,5 +72,5 @@ def CEA(O_F, T_init, P_init, epsilon, gas_origin, stoich_coeffs, nfz = 2):
         # 定数固定する値の指定
         const = {"Cstar": Cstar, "gamma": gamma_s}
 
-        throat_props, exit_props, throat_perf, exit_perf = nozzle_flow(chamber_props, gas, P_init, P_exit, gas_origin, const, stoich_coeffs, mode = epsilon, nfz = nfz)
+        throat_props, exit_props, throat_perf, exit_perf = nozzle_flow(chamber_props, gas, P_calc, P_exit, gas_origin, const, stoich_coeffs, mode = epsilon, nfz = nfz)
     return chamber_props, throat_props, exit_props, throat_perf, exit_perf

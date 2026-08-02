@@ -321,13 +321,13 @@ class RocketSimulation:
 
         # 終了時酸化剤質量を定義
         _, rho_ox_end =  RocketSimulation.calc_rho_ox(self, self.Ptank_fin, "gas")
-        Mass_ox_end = self.Vol_ox * rho_ox_end * 1000
-        print(Mass_ox_end)
+        self.Mass_ox_end = self.Vol_ox * rho_ox_end * 1000
+        print(self.Mass_ox_end)
         print(self.Mass_ox_remain)
 
         # 酸化剤が規定量になるまで時間発展
         pbar = tqdm(desc="Processing", unit="steps")
-        while self.Mass_ox_remain >= Mass_ox_end:
+        while self.Mass_ox_remain >= self.Mass_ox_end:
             # 流量計算
             self.delta_p = (self.Ptank_tmp1 - self.Pc_tmp1) * 1000000
             # 微小時間における酸化剤流量[g/ms]
@@ -344,9 +344,9 @@ class RocketSimulation:
             self.OF_tmp1 = self.mdot_ox / self.mdot_f
 
             # CEA計算
-            (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
-            self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-            self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new, gas_origin, stoich_coeffs) 
+            if self.k % 1 == 0:
+                (_, self.Cstar_tmp1, self.CF_tmp1, _, _, _, _, _,
+                self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new, gas_origin, stoich_coeffs) 
 
             # 推力の計算
             self.F_fte = self.eta * ((self.mdot_ox + self.mdot_f) * self.a_tmp1 * self.Mach_tmp1 + (self.Pe_tmp1 - self.Pa_tmp1) * self.Ae_new * 1e6)
@@ -358,7 +358,7 @@ class RocketSimulation:
             self.Mass_ox_remain = self.Mass_ox_remain - self.mdot_ox
 
             # 次iterationへ投げる圧力の計算
-            self.Ptank_tmp1 = self.Ptank_init + (self.Ptank_fin - self.Ptank_init) / (Mass_ox_end - self.Mass_ox) * (self.Mass_ox_remain - self.Mass_ox)
+            self.Ptank_tmp1 = self.Ptank_init + (self.Ptank_fin - self.Ptank_init) / (self.Mass_ox_end - self.Mass_ox) * (self.Mass_ox_remain - self.Mass_ox)
             self.Pc_tmp1 = 4 * self.eta_cstar * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) /(math.pi * self.Dt ** 2 ) / 1000000
             self.k = self.k + 1
 

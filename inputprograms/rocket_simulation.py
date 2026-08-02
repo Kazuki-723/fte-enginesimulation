@@ -243,7 +243,7 @@ class RocketSimulation:
 
     # 時間発展計算
     def integration_simulation(self, Pc, Df, OF, eta_cstar, eta_nozzle, Kstar, epsilon,
-                    Lf, mdot, V_tank, P_init, P_final, rho_ox, rho_fuel, a, n, F, Dt):
+                    Lf, mdot, V_tank, P_init, P_final, rho_ox, rho_fuel, a, n, F, Dt, cea_interval):
         # 入力の設定
         self.Pc_tmp1 = Pc
         self.Df = Df
@@ -266,6 +266,7 @@ class RocketSimulation:
         self.It = 0
         self.F = F
         self.Dt = Dt
+        self.cea_interval = cea_interval
         self.Ae_new = math.pi / 4 * self.Dt ** 2 * self.epsilon_new
 
         # cantera初期化
@@ -344,7 +345,7 @@ class RocketSimulation:
             self.OF_tmp1 = self.mdot_ox / self.mdot_f
 
             # CEA計算
-            if self.k % 1 == 0:
+            if self.k % self.cea_interval == 0:
                 (_, self.Cstar_tmp1, self.CF_tmp1, _, _, _, _, _,
                 self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = RocketSimulation.ctcea_compute(self, self.OF_tmp1, self.T_init, self.Pc_tmp1, self.epsilon_new, gas_origin, stoich_coeffs) 
 

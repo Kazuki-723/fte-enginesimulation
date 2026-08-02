@@ -98,12 +98,25 @@ def run_time_evolution_mode():
     V_tank = inputvalues["Vol_ox"]
     P_final = inputvalues["Pt_end"]
     Dt = inputvalues["Dt"]
+    is_fast = inputvalues["is_fast"]
 
+    if isinstance(is_fast, int) != True:
+        print("invailed settings, set to normal mode")
+        is_fast = 1
+    elif is_fast == 1:
+        print("normal mode")
+    elif is_fast > 1:
+        print("fast mode")
+    else:
+        print("invailed settings, set to normal mode")
+        is_fast = 1
+
+    cea_interval = is_fast
     # normal
     (_, _, _, _, _, _, _, evolution_result, _,) = sim.integration_simulation(
         Pc=Pc, Df=Df, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,
         epsilon=epsilon, Lf=Lf, mdot=mdot, V_tank=V_tank, P_init=P_init, P_final=P_final,
-        rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, F=F, Dt=Dt)
+        rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, F=F, Dt=Dt, cea_interval = cea_interval)
 
     # 計算本体の時間をはかる
     end = time.perf_counter()

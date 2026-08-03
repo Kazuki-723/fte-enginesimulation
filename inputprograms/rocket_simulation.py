@@ -6,8 +6,8 @@ from inputprograms.interp_density import OxidizerDatabase
 # ct-cea loading
 from inputprograms import cea
 # memory debug
-import psutil, os
-process = psutil.Process(os.getpid())
+# import psutil, os
+# process = psutil.Process(os.getpid())
 
 # 定数定義
 R_univ = 8314 # 一般気体定数 [mJ/mol-K]
@@ -399,9 +399,9 @@ class RocketSimulation:
             self.gamma_arr.append(self.gamma_tmp1)            
 
             self.It = self.It + self.F_new * 0.001
-            if self.k % 200 == 0:
-                mem = process.memory_info().rss / 1024**2
-                print(f"iter {self.k}: {mem:.2f} MB")
+            # if self.k % 200 == 0:
+            #     mem = process.memory_info().rss / 1024**2
+            #     print(f"iter {self.k}: {mem:.2f} MB")
 
         pbar.close()
         

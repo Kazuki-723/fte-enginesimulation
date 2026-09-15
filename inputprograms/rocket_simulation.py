@@ -3,6 +3,7 @@ import math
 from inputprograms.cea_interface import CEAInterface
 from inputprograms.iteration_logger import IterationLogger
 from inputprograms.interp_density import OxidizerDatabase
+from tqdm import tqdm
 
 # 定数定義
 R_univ = 8314 # 一般気体定数 [mJ/mol-K]
@@ -210,7 +211,7 @@ class RocketSimulation:
 
     # 時間発展計算
     def integration_simulation(self, Pc, Df, OF, eta_cstar, eta_nozzle, Kstar, epsilon,
-                    Lf, mdot, V_tank, P_init, P_final, rho_ox, rho_fuel, a, n, F, Dt):
+                    Lf, mdot, V_tank, P_init, P_final, rho_ox, rho_fuel, a, n, F, Dt, cea_interval):
         # 入力の設定
         self.Pc_tmp1 = Pc
         self.Df = Df
@@ -233,6 +234,7 @@ class RocketSimulation:
         self.It = 0
         self.F = F
         self.Dt = Dt
+        self.cea_interval = cea_interval
         self.Ae_new = math.pi / 4 * self.Dt ** 2 * self.epsilon_new
 
         # 必要値の定義
@@ -281,15 +283,16 @@ class RocketSimulation:
         self.gamma_arr = np.array([self.gamma_tmp1])
         self.Df_arr = np.array([self.Df])
 
-        print("epsilon_new = ", self.epsilon_new)
+        print("epsilon_new =", self.epsilon_new)
 
         # 終了時酸化剤質量を定義
         _, rho_ox_end =  RocketSimulation.calc_rho_ox(self, self.Ptank_fin, "gas")
         Mass_ox_end = self.Vol_ox * rho_ox_end * 1000
-        print(Mass_ox_end)
-        print(self.Mass_ox_remain)
+        print("combustion end ox_mass =", Mass_ox_end, "[g]")
+        print("remain ox_mass =", self.Mass_ox_remain, "[g]")
 
         # 酸化剤が規定量になるまで時間発展
+        pbar = tqdm(desc="Processing", unit="steps")
         while self.Mass_ox_remain >= Mass_ox_end:
             # 流量計算
             self.delta_p = (self.Ptank_tmp1 - self.Pc_tmp1) * 1000000
@@ -297,40 +300,33 @@ class RocketSimulation:
             self.mdot_ox = (self.Kstar * np.sqrt(2 * self.rho_ox_init * self.delta_p))  
             # 微小時間における燃料流量[g/ms]
             self.mdot_f = (self.Ap * self.rho_f_start * self.a_ox * ((4 * self.mdot_ox) / (math.pi * self.Df ** 2)) ** self.n_ox) 
-            print("Df = ", self.Df)
 
             # rdot計算
             self.rdot = self.a_ox * ((4 * self.mdot_ox) / (math.pi * self.Df ** 2)) ** self.n_ox
-            print(self.rdot)
             #燃料後退，反応表面積計算
             self.Df = self.Df + (2 * self.rdot / 1000)
             self.Ap = self.Df * math.pi * self.Lf
 
-            print("mdot_ox = ", self.mdot_ox, "[g/ms]")
-            print("mdot_f = ", self.mdot_f, "[g/ms]")
-
             # OF算出
             self.OF_tmp1 = self.mdot_ox / self.mdot_f
-            print("OF_tmp1", self.OF_tmp1)
 
             # CEA計算
-            (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1, 
-             self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1, 
-             self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
+            if self.k % self.cea_interval == 0:
+                (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1, 
+                self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1, 
+                self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
+                # CFの圧力補正
+                CF_atm = self.CF_tmp1
+                self.CF_tmp1 = CF_atm + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_tmp1
 
             # 気体物性値評価
             self.R_tmp1 = self.R_univ / self.Mole_tmp1  # 気体定数
 
             # 推力の計算
             self.F_fte = self.eta * ((self.mdot_ox + self.mdot_f) * self.a_tmp1 * self.Mach_tmp1 + (self.Pe_tmp1 - self.Pa_tmp1) * self.Ae_new * 1e6)
-            
-            # CFの圧力補正
-            self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_tmp1
             self.F_new = self.eta * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) * self.CF_tmp1
 
             # 酸化剤残量の更新
-            print("F = ", self.F_new)
-            print("Pe = ", self.Pe_tmp1)
             self.Mass_ox_remain = self.Mass_ox_remain - self.mdot_ox
 
             # 次iterationへ投げる圧力の計算
@@ -339,15 +335,22 @@ class RocketSimulation:
             self.k = self.k + 1
 
             # iteration log terminal管理
-            print("Pc_tmp1 = ", self.Pc_tmp1)
-            print("Ptank_tmp1 = ", self.Ptank_tmp1)
-            print("Pt = ", self.Ptank_tmp1)
-            print("Mass_ox = ", self.Mass_ox)
-            print("Remain ox = ", self.Mass_ox_remain)
-            print("Lf = ", self.Lf)
-            print("k = ", self.k)
-            print("---------------")
-
+            # print("Df = ", self.Df)
+            # print(self.rdot)
+            # print("mdot_ox = ", self.mdot_ox, "[g/ms]")
+            # print("mdot_f = ", self.mdot_f, "[g/ms]")
+            # print("OF_tmp1", self.OF_tmp1)
+            # print("F = ", self.F_new)
+            # print("Pe = ", self.Pe_tmp1)
+            # print("Pc_tmp1 = ", self.Pc_tmp1)
+            # print("Ptank_tmp1 = ", self.Ptank_tmp1)
+            # print("Pt = ", self.Ptank_tmp1)
+            # print("Mass_ox = ", self.Mass_ox)
+            # print("Remain ox = ", self.Mass_ox_remain)
+            # print("Lf = ", self.Lf)
+            # print("k = ", self.k)
+            # print("---------------")
+            pbar.update(1)  # 進捗を増やす
             # 配列管理
             self.Pt_arr = np.append(self.Pt_arr, self.Ptank_tmp1)
             self.Pc_int_arr = np.append(self.Pc_int_arr, self.Pc_tmp1)
@@ -365,15 +368,17 @@ class RocketSimulation:
             self.gamma_arr = np.append(self.gamma_arr, self.gamma_tmp1)
 
             self.It = self.It + self.F_new * 0.001
+
+        pbar.close()
         
         # print result
         print("----------RESULT----------")
-        print("Kstar = ", self.Kstar)
-        print("O/F_init = ", OF, "[-]")
-        print("It = ", self.It, "[Ns]")
-        print("Lf = ", Lf * 1000, "[mm]")
-        print("Df_init = ", Df * 1000, "[mm]")
-        print("Df_final = ", self.Df * 1000, "[mm]")
+        print("Kstar =", self.Kstar)
+        print("O/F_init =", OF, "[-]")
+        print("It =", self.It, "[Ns]")
+        print("Lf =", Lf * 1000, "[mm]")
+        print("Df_init =", Df * 1000, "[mm]")
+        print("Df_final =", self.Df * 1000, "[mm]")
         print("F_ave =", self.It * 1000 / self.k, "[N]")
         print("end time evolution simulation")
         time_ms = list(range(len(self.F_arr)))

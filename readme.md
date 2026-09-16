@@ -125,3 +125,8 @@ Rocket Engines – Introduction to Aerospace Flight Vehicles, https://eaglepubs.
 
 Karp, Ashley Chandler and Jens, Elizabeth Therese. Hybrid rocket propulsion design handbook, 2024 ISBN 9780128161999.
 https://www.sciencedirect.com/book/monograph/9780128161999/hybrid-rocket-propulsion-design-handbook
+
+# NASACEA license 
+Modifications:
+   Custom 4 species data added by FROM THE EARTH Tohoku University Student Rocket team, 2026.
+   Original NASA CEA code is Apache License 2.0.

@@ -1,6 +1,5 @@
 import numpy as np
 import math
-#from inputprograms.cea_interface import CEAInterface
 from inputprograms.iteration_logger import IterationLogger
 from inputprograms.interp_density import OxidizerDatabase
 from inputprograms.cea_calculator import RocketCEA
@@ -39,19 +38,23 @@ class RocketSimulation:
 
     # CEAデータ処理部
     def cea_compute(self, fuel_material, P_init, OF, epsilon):
+        # 値定義
         engine = RocketCEA(
-        fuel=fuel_material, # ABS or MMA
+        fuel=fuel_material, # ABS or MMA set in json file
         oxidizer="N2O", # only N2O
         Pc_MPa=P_init,
         OF=OF,
         n_frz = 2, # 凍結流指定，大体2(throat以降凍結)
         epsilon=epsilon # Noneだと出口大気圧，それ以外は開口比
         )
+        # 計算本体
         result = engine.run()
+
+        # 結果のパース
         chamber_props = result["chamber"]
-        throat_props  = result["throat"]
-        exit_props    = result["exit"]
-        perf    = result["performance"]
+        throat_props = result["throat"]
+        exit_props = result["exit"]
+        perf = result["performance"]
 
         #大結果シュート大会
         gamma_tmp1 = chamber_props['gamma']
@@ -93,38 +96,26 @@ class RocketSimulation:
         self.fuel_material = fuel_material
 
         # 最適epsilon調整
-        # (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
-        #  self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        #  self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, epsilon=3)
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
-        self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, self.epsilon_new) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_def, self.OF_def, epsilon = None)
+             self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
+             self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, self.epsilon_new) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_def, self.OF_def, epsilon = None)
         
         # CEA入力明示
-        print(self.gamma_tmp1)
-        print(self.Pc_def)
-        print(self.Pa)
+        print("gamma =",self.gamma_tmp1)
+        print("Pc =",self.Pc_def)
+        print("OF =",self.OF_def)
 
-        # epsilonの計算式
-        # self.epsilon_new = \
-        # ((self.gamma_tmp1 + 1) / 2) ** (1 / (self.gamma_tmp1 - 1)) * \
-        # (self.Pa / self.Pc_def) ** (1 / self.gamma_tmp1) * \
-        # np.sqrt((self.gamma_tmp1 + 1) / (self.gamma_tmp1 - 1) * (1 - (self.Pa/ self.Pc_def) ** ((self.gamma_tmp1 - 1) / self.gamma_tmp1)))
-        # self.epsilon_new = 1/self.epsilon_new
-        print("calculated epsilon = ", self.epsilon_new, "[-]")
+        # 大気圧時の開口比
+        print("calculated epsilon = ",self.epsilon_new, "[-]")
 
         # 初期CEA計算
-        # (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
-        #  self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        #  self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, self.epsilon_new)
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
-        self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-        self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, _) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_def, self.OF_def, epsilon = self.epsilon_new)
+             self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
+             self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, _) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_def, self.OF_def, epsilon = self.epsilon_new)
 
         # iteration設定
         self.Pe_old = self.Pe_tmp1
         self.diff_exit = 2
-        self.i = 0
         self.j = 1
 
         # ループ初期条件計算
@@ -140,12 +131,9 @@ class RocketSimulation:
             self.mdot_old = self.mdot_new
 
             # CEAによる計算
-            # (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
-            #  self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-            #  self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_def, self.OF_def, self.epsilon_new)
             (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
-            self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-            self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, _) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_def, self.OF_def, epsilon = self.epsilon_new)
+                 self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
+                 self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, _) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_def, self.OF_def, epsilon = self.epsilon_new)
 
             # 出口速度計算
             self.R_tmp1 = self.R_univ / self.Mole_tmp1
@@ -310,9 +298,6 @@ class RocketSimulation:
         self.Lf = self.Lf - diseffect_length
 
         # 初期状態CEA
-        # (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1, 
-        #      self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1, 
-        #      self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
              self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
              self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, _) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
@@ -362,12 +347,9 @@ class RocketSimulation:
 
             # CEA計算
             if self.k % self.cea_interval == 0:
-                # (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1, 
-                # self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1, 
-                # self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1) = CEAInterface.compute(self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
                 (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
-                self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-                self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, _) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
+                     self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
+                     self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, _) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
                 # CFの圧力補正
                 CF_atm = self.CF_tmp1
                 self.CF_tmp1 = CF_atm + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_tmp1
@@ -387,22 +369,6 @@ class RocketSimulation:
             self.Pc_tmp1 = 4 * self.eta_cstar * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) /(math.pi * self.Dt ** 2 ) / 1000000
             self.k = self.k + 1
 
-            # iteration log terminal管理
-            # print("Df = ", self.Df)
-            # print(self.rdot)
-            # print("mdot_ox = ", self.mdot_ox, "[g/ms]")
-            # print("mdot_f = ", self.mdot_f, "[g/ms]")
-            # print("OF_tmp1", self.OF_tmp1)
-            # print("F = ", self.F_new)
-            # print("Pe = ", self.Pe_tmp1)
-            # print("Pc_tmp1 = ", self.Pc_tmp1)
-            # print("Ptank_tmp1 = ", self.Ptank_tmp1)
-            # print("Pt = ", self.Ptank_tmp1)
-            # print("Mass_ox = ", self.Mass_ox)
-            # print("Remain ox = ", self.Mass_ox_remain)
-            # print("Lf = ", self.Lf)
-            # print("k = ", self.k)
-            # print("---------------")
             pbar.update(1)  # 進捗を増やす
             # 配列管理
             self.Pt_arr = np.append(self.Pt_arr, self.Ptank_tmp1)

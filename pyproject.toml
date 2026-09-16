@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "cea>=3.3.4",
     "flet>=0.28.3",
     "flet-desktop>=0.28.3",
     "matplotlib>=3.10.7",

@@ -37,17 +37,17 @@ class RocketCEA:
         else:
             # MMA or other single-species fuel
             # MMAはthermo databaseもMMAで登録しているので，そのままdbに渡す
-            self.reac_names = [fuel, oxidizer]
+            self.reac_names   = [fuel, oxidizer]
             self.fuel_weights = np.array([1.0, 0.0])
             self.oxid_weights = np.array([0.0, 1.0])
-            self.T_reactants = np.array([300.0, 300.0])
+            self.T_reactants  = np.array([300.0, 300.0])
 
         # Mixtures
         self.reac = cea.Mixture(self.reac_names)
         self.prod = cea.Mixture(self.reac_names, products_from_reactants=True)
 
         # Solver
-        self.solver = cea.RocketSolver(self.prod, reactants=self.reac)
+        self.solver   = cea.RocketSolver(self.prod, reactants=self.reac)
         self.solution = cea.RocketSolution(self.solver)
 
     def compute_pressure_ratio_for_exit_atm(self):
@@ -72,12 +72,12 @@ class RocketCEA:
         # Decide pressure ratio or area ratio
         if self.epsilon is None:
             # Exit pressure = 1 atm
-            pi_p = [self.compute_pressure_ratio_for_exit_atm()]
-            subar = [1.01]      # throat　set 1.01 to avoid diverge
+            pi_p  = [self.compute_pressure_ratio_for_exit_atm()]
+            subar = [1.01]      # throat, set 1.01 to avoid diverge
             supar = None       # not used
         else:
             # User-specified area ratio
-            pi_p = None       # not used
+            pi_p  = None       # not used
             subar = [1.01]
             supar = [self.epsilon]
 
@@ -105,42 +105,42 @@ class RocketCEA:
             self.exit = -1
         return {
             "chamber": {
-                "T": sol.T[0],
-                "P": sol.P[0],
-                "rho": sol.density[0],
+                "T"    : sol.T[0],
+                "P"    : sol.P[0],
+                "rho"  : sol.density[0],
                 "gamma": sol.gamma_s[0],
-                "MW": sol.MW[0],
-                "Cp": sol.cp_eq[0],
-                "H": sol.enthalpy[0],
-                "S": sol.entropy[0],
+                "MW"   : sol.MW[0],
+                "Cp"   : sol.cp_eq[0],
+                "H"    : sol.enthalpy[0],
+                "S"    : sol.entropy[0],
             },
             "throat": {
-                "T": sol.T[1],
-                "P": sol.P[1],
-                "rho": sol.density[1],
-                "Mach": sol.Mach[1],
+                "T"    : sol.T[1],
+                "P"    : sol.P[1],
+                "rho"  : sol.density[1],
+                "Mach" : sol.Mach[1],
                 "gamma": sol.gamma_s[1],
-                "MW": sol.MW[1],
-                "Cp": sol.cp_eq[1],
-                "H": sol.enthalpy[1],
-                "S": sol.entropy[1],
+                "MW"   : sol.MW[1],
+                "Cp"   : sol.cp_eq[1],
+                "H"    : sol.enthalpy[1],
+                "S"    : sol.entropy[1],
             },
             "exit": {
-                "T": sol.T[self.exit],
-                "P": sol.P[self.exit],
-                "rho": sol.density[self.exit],
-                "Mach": sol.Mach[self.exit],
+                "T"      : sol.T[self.exit],
+                "P"      : sol.P[self.exit],
+                "rho"    : sol.density[self.exit],
+                "Mach"   : sol.Mach[self.exit],
                 "epsilon": sol.ae_at[self.exit],
-                "gamma": sol.gamma_s[self.exit],
-                "MW": sol.MW[self.exit],
-                "Cp": sol.cp_eq[self.exit],
-                "H": sol.enthalpy[self.exit],
-                "S": sol.entropy[self.exit],
+                "gamma"  : sol.gamma_s[self.exit],
+                "MW"     : sol.MW[self.exit],
+                "Cp"     : sol.cp_eq[self.exit],
+                "H"      : sol.enthalpy[self.exit],
+                "S"      : sol.entropy[self.exit],
             },
             "performance": {
-                "Cstar": sol.c_star[self.exit],
-                "Cf": sol.coefficient_of_thrust[self.exit],
-                "Isp": sol.Isp[self.exit],
+                "Cstar"  : sol.c_star[self.exit],
+                "Cf"     : sol.coefficient_of_thrust[self.exit],
+                "Isp"    : sol.Isp[self.exit],
                 "Isp_vac": sol.Isp_vacuum[self.exit],
             },
             "mole_fractions": sol.mole_fractions,

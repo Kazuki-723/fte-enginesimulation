@@ -26,21 +26,21 @@ def run_initial_condition_mode():
     _, rho_ox = sim.calc_rho_ox(inputvalues["Pt_init"], "liquid")
 
     # initial_convergence()に投げる部分
-    F_req = inputvalues["F_req"]
-    Pc_def = inputvalues["Pc_def"]
-    OF_def = inputvalues["OF_def"]
-    mdot_new = inputvalues["mdot_new"]
-    Df_init = inputvalues["Df_init"]
-    eta_cstar = inputvalues["eta_cstar"]
-    eta_nozzle = inputvalues["eta_nozzle"]
-    Ptank_init = inputvalues["Pt_init"]
-    rho_ox_init = rho_ox
-    rho_f_start = inputvalues["rho_f"]
-    a_ox = inputvalues["a_ox"]
-    n_ox = inputvalues["n_ox"]
+    F_req         = inputvalues["F_req"]
+    Pc_def        = inputvalues["Pc_def"]
+    OF_def        = inputvalues["OF_def"]
+    mdot_new      = inputvalues["mdot_new"]
+    Df_init       = inputvalues["Df_init"]
+    eta_cstar     = inputvalues["eta_cstar"]
+    eta_nozzle    = inputvalues["eta_nozzle"]
+    Ptank_init    = inputvalues["Pt_init"]
+    rho_ox_init   = rho_ox
+    rho_f_start   = inputvalues["rho_f"]
+    a_ox          = inputvalues["a_ox"]
+    n_ox          = inputvalues["n_ox"]
     fuel_material = inputvalues["fuel_material"]
 
-    _, _, _ = sim.initial_convergence(
+    _ = sim.initial_convergence(
         F_req, Pc_def, OF_def, mdot_new, Df_init,
         eta_cstar, eta_nozzle, Ptank_init,
         rho_ox_init, rho_f_start, a_ox, n_ox, fuel_material
@@ -69,27 +69,27 @@ def run_time_evolution_mode():
     _, rho_ox = sim.calc_rho_ox(inputvalues["Pt_init"], "liquid")
 
     # integration_simulation()に投げる部分
-    F = inputvalues["F_init"]
-    Pc = inputvalues["Pc_def"]
-    OF = inputvalues["OF_def"]
-    mdot = inputvalues["mdot_new"]
-    Df = inputvalues["Df_init"]
-    eta_cstar = inputvalues["eta_cstar"]
-    eta_nozzle = inputvalues["eta_nozzle"]
-    P_init = inputvalues["Pt_init"]
-    rho_f = inputvalues["rho_f"]
-    a_ox = inputvalues["a_ox"]
-    n_ox = inputvalues["n_ox"]
+    F             = inputvalues["F_init"]
+    Pc            = inputvalues["Pc_def"]
+    OF            = inputvalues["OF_def"]
+    mdot          = inputvalues["mdot_new"]
+    Df            = inputvalues["Df_init"]
+    eta_cstar     = inputvalues["eta_cstar"]
+    eta_nozzle    = inputvalues["eta_nozzle"]
+    P_init        = inputvalues["Pt_init"]
+    rho_f         = inputvalues["rho_f"]
+    a_ox          = inputvalues["a_ox"]
+    n_ox          = inputvalues["n_ox"]
     fuel_material = inputvalues["fuel_material"]
-    Kstar = inputvalues["Kstar"]
-    epsilon = inputvalues["epsilon"]
-    Lf = inputvalues["Lf"]
-    V_tank = inputvalues["Vol_ox"]
-    P_final = inputvalues["Pt_end"]
-    Dt = inputvalues["Dt"]
-    is_fast = inputvalues["is_fast"]
+    Kstar         = inputvalues["Kstar"]
+    epsilon       = inputvalues["epsilon"]
+    Lf            = inputvalues["Lf"]
+    V_tank        = inputvalues["Vol_ox"]
+    P_final       = inputvalues["Pt_end"]
+    Dt            = inputvalues["Dt"]
+    is_fast       = inputvalues["is_fast"]
 
-    if isinstance(is_fast, int) != True:
+    if not isinstance(is_fast, int):
         print("invailed settings, set to normal mode")
         is_fast = 1
     elif is_fast == 1:
@@ -152,8 +152,6 @@ def run_time_evolution_mode():
                         key, val = input_params[i + j]
                         row.extend([key, val])
                 writer.writerow(row)
-
-
             writer.writerow([])  # 空行
             writer.writerow(["# evolution params."])
             writer.writerow(evolution_headers)

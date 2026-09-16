@@ -19,21 +19,21 @@ class RocketSimulation:
         self.diffuse_deg = 12 #ディフューザーの拡大角[deg]
 
         # 積分計算用の配列初期化
-        self.Pt_arr = np.array([])
-        self.Pc_int_arr = np.array([])
-        self.F_arr = np.array([])
-        self.OF_arr = np.array([])
-        self.Ap_arr = np.array([])
-        self.mdot_arr = np.array([])
-        self.Cstar_arr = np.array([])
-        self.CF_arr = np.array([])
-        self.F_fte_arr = np.array([])
-        self.M_ox_arr = np.array([])
+        self.Pt_arr        = np.array([])
+        self.Pc_int_arr    = np.array([])
+        self.F_arr         = np.array([])
+        self.OF_arr        = np.array([])
+        self.Ap_arr        = np.array([])
+        self.mdot_arr      = np.array([])
+        self.Cstar_arr     = np.array([])
+        self.CF_arr        = np.array([])
+        self.F_fte_arr     = np.array([])
+        self.M_ox_arr      = np.array([])
         self.kstar_cd_list = np.array([])
 
     # Ptからrho_oxを計算
     def calc_rho_ox(self, pressure, phasedata):
-        phase, rho = self.ox_db.get_density(pressure, phase = phasedata)
+        phase, rho = self.ox_db.get_density(pressure, phase=phasedata)
         return phase, rho
 
     # CEAデータ処理部
@@ -52,23 +52,23 @@ class RocketSimulation:
 
         # 結果のパース
         chamber_props = result["chamber"]
-        throat_props = result["throat"]
-        exit_props = result["exit"]
-        perf = result["performance"]
+        throat_props  = result["throat"]
+        exit_props    = result["exit"]
+        perf          = result["performance"]
 
-        #大結果シュート大会
-        gamma_tmp1 = chamber_props['gamma']
-        Cstar_tmp1 = perf['Cstar']
-        CF_tmp1 = perf['Cf']
-        T_c_tmp1 = chamber_props["T"]
-        T_t_tmp1 = throat_props["T"]
-        T_e_tmp1 = exit_props["T"]
-        Mole_tmp1 = chamber_props["MW"]
-        Pthroat_tmp1 = throat_props["P"] / 10 # bar to MPa
-        Pe_tmp1 = exit_props["P"] / 10 # bar to MPa
-        Mach_tmp1 = exit_props["Mach"]
-        a_tmp1 = np.sqrt(exit_props['gamma'] * R_univ / exit_props["MW"] * T_e_tmp1)
-        epsilon = exit_props["epsilon"]
+        # 大結果シュート大会
+        gamma_tmp1    = chamber_props['gamma']
+        Cstar_tmp1    = perf['Cstar']
+        CF_tmp1       = perf['Cf']
+        T_c_tmp1      = chamber_props["T"]
+        T_t_tmp1      = throat_props["T"]
+        T_e_tmp1      = exit_props["T"]
+        Mole_tmp1     = chamber_props["MW"]
+        Pthroat_tmp1  = throat_props["P"] / 10
+        Pe_tmp1       = exit_props["P"] / 10
+        Mach_tmp1     = exit_props["Mach"]
+        a_tmp1        = np.sqrt(exit_props['gamma'] * R_univ / exit_props["MW"] * T_e_tmp1)
+        epsilon       = exit_props["epsilon"]
 
         return gamma_tmp1, Cstar_tmp1, CF_tmp1, T_c_tmp1,\
         T_t_tmp1, T_e_tmp1, Mole_tmp1, Pthroat_tmp1,\
@@ -79,26 +79,26 @@ class RocketSimulation:
         log = []
 
         # 入力パラメータの設定
-        self.F_req = F_req * eta_cstar * eta_nozzle
-        self.Pc_def = Pc_def
-        self.OF_def = OF_def
-        self.mdot_new = mdot_new
-        self.mdot_old = mdot_new
-        self.Df_init = Df_init
-        self.eta_cstar = eta_cstar
-        self.eta_nozzle = eta_nozzle
-        self.eta = eta_cstar * eta_nozzle
-        self.rho_ox_init = rho_ox_init 
-        self.Ptank_init = Ptank_init
-        self.rho_f_start = rho_f_start
-        self.a_ox = a_ox
-        self.n_ox = n_ox
+        self.F_req         = F_req * eta_cstar * eta_nozzle
+        self.Pc_def        = Pc_def
+        self.OF_def        = OF_def
+        self.mdot_new      = mdot_new
+        self.mdot_old      = mdot_new
+        self.Df_init       = Df_init
+        self.eta_cstar     = eta_cstar
+        self.eta_nozzle    = eta_nozzle
+        self.eta           = eta_cstar * eta_nozzle
+        self.rho_ox_init   = rho_ox_init 
+        self.Ptank_init    = Ptank_init
+        self.rho_f_start   = rho_f_start
+        self.a_ox          = a_ox
+        self.n_ox          = n_ox
         self.fuel_material = fuel_material
 
         # 最適epsilon調整
         (self.gamma_tmp1, self.Cstar_tmp1, self.CF_tmp1, self.T_c_tmp1,
              self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
-             self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, self.epsilon_new) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_def, self.OF_def, epsilon = None)
+             self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, self.epsilon_new) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_def, self.OF_def, epsilon=None)
         
         # CEA入力明示
         print("gamma =",self.gamma_tmp1)
@@ -114,15 +114,15 @@ class RocketSimulation:
              self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, _) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_def, self.OF_def, epsilon = self.epsilon_new)
 
         # iteration設定
-        self.Pe_old = self.Pe_tmp1
+        self.Pe_old    = self.Pe_tmp1
         self.diff_exit = 2
-        self.j = 1
+        self.j         = 1
 
         # ループ初期条件計算
-        self.R_tmp1 = self.R_univ / self.Mole_tmp1
+        self.R_tmp1  = self.R_univ / self.Mole_tmp1
         self.Ve_tmp1 = self.a_tmp1 * self.Mach_tmp1
-        self.F = self.mdot_new * self.Ve_tmp1
-        self.diff_F = self.F_req - self.F
+        self.F       = self.mdot_new * self.Ve_tmp1
+        self.diff_F  = self.F_req - self.F
 
         # 目標推力に対して収束させる
         while abs(self.diff_F) > 0.1:
@@ -136,7 +136,7 @@ class RocketSimulation:
                  self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, _) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_def, self.OF_def, epsilon = self.epsilon_new)
 
             # 出口速度計算
-            self.R_tmp1 = self.R_univ / self.Mole_tmp1
+            self.R_tmp1  = self.R_univ / self.Mole_tmp1
             self.Ve_tmp1 = self.a_tmp1 * self.Mach_tmp1
 
             # スロート断面積計算
@@ -147,13 +147,13 @@ class RocketSimulation:
             np.sqrt(self.gamma_tmp1 * self.R_tmp1 * self.T_e_tmp1)
 
             # 開口比、出口面積
-            self.Ae_new = (self.Pthroat_tmp1/self.Pa) ** (1/self.gamma_tmp1) * (1/self.Me_new) * self.At_new
+            self.Ae_new      = (self.Pthroat_tmp1/self.Pa) ** (1/self.gamma_tmp1) * (1/self.Me_new) * self.At_new
             self.epsilon_new = self.Ae_new / self.At_new
 
-            #推力計算
+            # 推力計算
             self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_def
-            self.F = self.CF_tmp1 * self.Cstar_tmp1 * self.eta * self.mdot_new
-            self.diff_F = self.F_req - self.F
+            self.F       = self.CF_tmp1 * self.Cstar_tmp1 * self.eta * self.mdot_new
+            self.diff_F  = self.F_req - self.F
 
             self.Dt = 2 * np.sqrt(self.At_new / math.pi)
             self.De = 2 * np.sqrt(self.Ae_new / math.pi)
@@ -179,7 +179,7 @@ class RocketSimulation:
 
         # 収束した初期状態の計算
         self.mdot_ox_init = (self.OF_def / (self.OF_def + 1)) * self.mdot_new  # 初期酸化剤流量[kg/s]
-        self.mdot_f_init = (1 / (self.OF_def + 1)) * self.mdot_new             # 初期燃料流量[kg/s]
+        self.mdot_f_init  = (1 / (self.OF_def + 1)) * self.mdot_new             # 初期燃料流量[kg/s]
 
         # Kstar = Discharge coef. * orifice cross section
         self.Kstar = self.mdot_ox_init / np.sqrt(2 * self.rho_ox_init * ((self.Ptank_init - self.Pc_def) * 1e6))
@@ -334,7 +334,7 @@ class RocketSimulation:
             # 微小時間における酸化剤流量[g/ms]
             self.mdot_ox = (self.Kstar * np.sqrt(2 * self.rho_ox_init * self.delta_p))  
             # 微小時間における燃料流量[g/ms]
-            self.mdot_f = (self.Ap * self.rho_f_start * self.a_ox * ((4 * self.mdot_ox) / (math.pi * self.Df ** 2)) ** self.n_ox) 
+            self.mdot_f  = (self.Ap * self.rho_f_start * self.a_ox * ((4 * self.mdot_ox) / (math.pi * self.Df ** 2)) ** self.n_ox) 
 
             # rdot計算
             self.rdot = self.a_ox * ((4 * self.mdot_ox) / (math.pi * self.Df ** 2)) ** self.n_ox
@@ -351,7 +351,7 @@ class RocketSimulation:
                      self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
                      self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, _) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_tmp1, self.OF_tmp1, self.epsilon_new)
                 # CFの圧力補正
-                CF_atm = self.CF_tmp1
+                CF_atm       = self.CF_tmp1
                 self.CF_tmp1 = CF_atm + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_tmp1
 
             # 気体物性値評価
@@ -366,28 +366,27 @@ class RocketSimulation:
 
             # 次iterationへ投げる圧力の計算
             self.Ptank_tmp1 = self.Ptank_init + (self.Ptank_fin - self.Ptank_init) / (Mass_ox_end - self.Mass_ox) * (self.Mass_ox_remain - self.Mass_ox)
-            self.Pc_tmp1 = 4 * self.eta_cstar * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) /(math.pi * self.Dt ** 2 ) / 1000000
-            self.k = self.k + 1
+            self.Pc_tmp1    = 4 * self.eta_cstar * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) /(math.pi * self.Dt ** 2 ) / 1000000
+            self.k += 1
 
             pbar.update(1)  # 進捗を増やす
+            
             # 配列管理
-            self.Pt_arr = np.append(self.Pt_arr, self.Ptank_tmp1)
-            self.Pc_int_arr = np.append(self.Pc_int_arr, self.Pc_tmp1)
-            self.F_arr = np.append(self.F_arr, self.F_new)
-            self.OF_arr = np.append(self.OF_arr, self.OF_tmp1)
-            self.Ap_arr = np.append(self.Ap_arr, self.Ap)
-            self.Df_arr = np.append(self.Df_arr, self.Df)
-            self.mdot = self.mdot_ox + self.mdot_f
-            self.mdot_arr = np.append(self.mdot_arr, self.mdot)
-            self.Cstar_arr = np.append(self.Cstar_arr, self.Cstar_tmp1)
-            self.CF_arr = np.append(self.CF_arr, self.CF_tmp1)
-            self.F_fte_arr = np.append(self.F_fte_arr, self.F_fte)
-            self.M_ox_arr = np.append(self.M_ox_arr, self.Mass_ox_remain)
+            self.Pt_arr      = np.append(self.Pt_arr, self.Ptank_tmp1)
+            self.Pc_int_arr  = np.append(self.Pc_int_arr, self.Pc_tmp1)
+            self.F_arr       = np.append(self.F_arr, self.F_new)
+            self.OF_arr      = np.append(self.OF_arr, self.OF_tmp1)
+            self.Ap_arr      = np.append(self.Ap_arr, self.Ap)
+            self.Df_arr      = np.append(self.Df_arr, self.Df)
+            self.mdot        = self.mdot_ox + self.mdot_f
+            self.mdot_arr    = np.append(self.mdot_arr, self.mdot)
+            self.Cstar_arr   = np.append(self.Cstar_arr, self.Cstar_tmp1)
+            self.CF_arr      = np.append(self.CF_arr, self.CF_tmp1)
+            self.F_fte_arr   = np.append(self.F_fte_arr, self.F_fte)
+            self.M_ox_arr    = np.append(self.M_ox_arr, self.Mass_ox_remain)
             self.mdot_ox_arr = np.append(self.mdot_ox_arr, self.mdot_ox)
-            self.gamma_arr = np.append(self.gamma_arr, self.gamma_tmp1)
-
-            self.It = self.It + self.F_new * 0.001
-
+            self.gamma_arr   = np.append(self.gamma_arr, self.gamma_tmp1)
+            self.It         += self.F_new * 0.001
         pbar.close()
         
         # print result

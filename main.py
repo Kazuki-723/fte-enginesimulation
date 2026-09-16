@@ -38,11 +38,12 @@ def run_initial_condition_mode():
     rho_f_start = inputvalues["rho_f"]
     a_ox = inputvalues["a_ox"]
     n_ox = inputvalues["n_ox"]
+    fuel_material = inputvalues["fuel_material"]
 
     _, _, _ = sim.initial_convergence(
         F_req, Pc_def, OF_def, mdot_new, Df_init,
         eta_cstar, eta_nozzle, Ptank_init,
-        rho_ox_init, rho_f_start, a_ox, n_ox
+        rho_ox_init, rho_f_start, a_ox, n_ox, fuel_material
     )
 
 # -------------------------
@@ -79,6 +80,7 @@ def run_time_evolution_mode():
     rho_f = inputvalues["rho_f"]
     a_ox = inputvalues["a_ox"]
     n_ox = inputvalues["n_ox"]
+    fuel_material = inputvalues["fuel_material"]
     Kstar = inputvalues["Kstar"]
     epsilon = inputvalues["epsilon"]
     Lf = inputvalues["Lf"]
@@ -103,7 +105,8 @@ def run_time_evolution_mode():
     (_, _, _, _, _, _, _, evolution_result, _,) = sim.integration_simulation(
         Pc=Pc, Df=Df, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,
         epsilon=epsilon, Lf=Lf, mdot=mdot, V_tank=V_tank, P_init=P_init, P_final=P_final,
-        rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, F=F, Dt=Dt, cea_interval = cea_interval)
+        rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, fuel_material = fuel_material,
+        F=F, Dt=Dt, cea_interval = cea_interval)
     
     # 結果出力
     print("input output csv filename(example.csv):")

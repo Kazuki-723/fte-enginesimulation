@@ -21,9 +21,10 @@ CLIは適当な環境でも動作確認済み．
 - numpy 2.3.4
 - pandas 2.3.3
 - scipy 1.16.3
+- cea 3.3.4
+-tqdm 4.70.1
 
-標準ライブラリについては，csv, re, base64, io, math, os, subprocessを使用している．
-一部windows標準コマンドを実行しているためおそらくwindows以外は非対応(未確認)．
+stableについては，未対応部分があるもののdevについては完全にpython内に収まっているのでMacでも動作するはず．
 
 ## 実行まで
 環境構築を行ったうえで，実際に実行するまでの手順をまとめる．
@@ -85,12 +86,6 @@ FLXsimulation.pyはCUIversionをクラス化して分割する前のコード．
 おおよそ，
 FLXsimulation.pyが一番古いデータで，そこからフォルダ整理したのが，main.py-pythonfliesの部分
 残りはおおよそ試行錯誤中の子たち．
-# Version History
- 2026/3/2  v1.2.0 リリース
-
- 2026/2/2  v1.1.0 リリース
- 
- 2025/12/4 V1.0.0 リリース
 
 # developer's Memo
 実装予定機能，不審挙動についてまとめる．
@@ -128,5 +123,6 @@ https://www.sciencedirect.com/book/monograph/9780128161999/hybrid-rocket-propuls
 
 # NASACEA license 
 Modifications:
+
    Custom 4 species data added by FROM THE EARTH Tohoku University Student Rocket team, 2026.
    Original NASA CEA code is Apache License 2.0.

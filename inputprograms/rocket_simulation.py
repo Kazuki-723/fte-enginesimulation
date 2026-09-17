@@ -240,6 +240,23 @@ class RocketSimulation:
 
         print("END initial condition simulation")
 
+        # jsonコピー用の出力
+        print("\n\n===== JSONC INPUT FOR NEXT SIMULATION =====")
+        print('{')
+        print(f'    "F_init": {self.F:.10f}, // 計算初期推力 [N]')
+        print(f'    "Pc_def": {self.Pc_def:.10f}, // 初期燃焼室圧力 [MPa]')
+        print(f'    "OF_def": {self.OF_def:.10f}, // 初期O/F比 [-]')
+        print(f'    "mdot_new": {self.mdot_new:.10f}, // 初期推進剤流量 [kg/s]')
+        print(f'    "Df_init": {self.Df_init:.10f}, // 初期燃料内径 [m]')
+        print(f'    "eta_cstar": {self.eta_cstar:.10f}, // Cstar効率 [-]')
+        print(f'    "eta_nozzle": {self.eta_nozzle:.10f}, // nozzle効率 [-]')
+        print(f'    "Kstar": {self.Kstar:.15f}, // Kstar = Cd * A_orifice [m^2]')
+        print(f'    "epsilon": {self.epsilon_new:.10f}, // 開口比 [-]')
+        print(f'    "Lf": {self.Lf_total:.10f}, // 燃料長さ [m]')
+        print(f'    "Dt": {self.Dt:.10f}, // スロート径 [m]')
+        print('}')
+        print("===== END JSONC INPUT =====\n")
+
         return "\n".join(log), self.kstar_cd_list, self.cd_values
 
     # 時間発展計算
@@ -370,7 +387,7 @@ class RocketSimulation:
             self.k += 1
 
             pbar.update(1)  # 進捗を増やす
-            
+
             # 配列管理
             self.Pt_arr      = np.append(self.Pt_arr, self.Ptank_tmp1)
             self.Pc_int_arr  = np.append(self.Pc_int_arr, self.Pc_tmp1)

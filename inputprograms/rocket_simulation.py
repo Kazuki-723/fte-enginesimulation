@@ -126,6 +126,7 @@ class RocketSimulation:
         self.diff_F  = self.F_req - self.F
 
         # 目標推力に対して収束させる
+        pbar = tqdm(desc="Processing", unit="steps")
         while abs(self.diff_F) > 0.1:
             # mdotを微小量動かして調整
             self.mdot_new = self.mdot_old + 0.0001 if self.diff_F >= 0.1 else self.mdot_old - 0.0001
@@ -170,13 +171,17 @@ class RocketSimulation:
             self.iter_logger.append(self.j, self.F, self.mdot_new, self.Pe_tmp1, self.epsilon_new)
 
             # terminal出力管理
-            print(f"--- Iteration {self.j} ---")
-            print(f"Thrust = {self.F:.3f} [N]")
-            print(f"diff_F = {self.diff_F:.6f} [N]")
-            print(f"mdot = {self.mdot_new:.6f} [kg/s]")
-            print(f"Pe = {self.Pe_tmp1:.4f} [MPa]")
-            print(f"Dt = {self.Dt:.4f} m, De = {self.De:.4f} m")
+            # print(f"--- Iteration {self.j} ---")
+            # print(f"Thrust = {self.F:.3f} [N]")
+            # print(f"diff_F = {self.diff_F:.6f} [N]")
+            # print(f"mdot = {self.mdot_new:.6f} [kg/s]")
+            # print(f"Pe = {self.Pe_tmp1:.4f} [MPa]")
+            # print(f"Dt = {self.Dt:.4f} m, De = {self.De:.4f} m")
             self.j += 1
+            # 進捗を増やす
+            pbar.update(1) 
+
+        pbar.close()
 
         # 収束した初期状態の計算
         self.mdot_ox_init = (self.OF_def / (self.OF_def + 1)) * self.mdot_new  # 初期酸化剤流量[kg/s]

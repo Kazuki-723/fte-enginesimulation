@@ -6,8 +6,9 @@ from inputprograms.cea_calculator import RocketCEA
 from tqdm import tqdm
 
 # 定数定義
-R_univ = 8314 # 一般気体定数 [mJ/mol-K]
-Pa = 0.1013   # 大気圧 [MPa]
+R_univ = 8314     # 一般気体定数 [mJ/mol-K]
+Pa     = 0.1013   # 大気圧 [MPa]
+g0     = 9.80665  # 標準重力加速度 [m/s^2]
 
 class RocketSimulation:
     def __init__(self):
@@ -386,7 +387,8 @@ class RocketSimulation:
             self.Pc_tmp1    = 4 * self.eta_cstar * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) /(math.pi * self.Dt ** 2 ) / 1000000
             self.k += 1
 
-            pbar.update(1)  # 進捗を増やす
+            # 進捗を増やす
+            pbar.update(1) 
 
             # 配列管理
             self.Pt_arr      = np.append(self.Pt_arr, self.Ptank_tmp1)
@@ -405,16 +407,23 @@ class RocketSimulation:
             self.gamma_arr   = np.append(self.gamma_arr, self.gamma_tmp1)
             self.It         += self.F_new * 0.001
         pbar.close()
-        
+
+        # 時間平均比推力計算
+        self.mdot_ave = np.average(self.mdot_arr)
+        self.F_ave = np.average(self.F_arr)
+        self.Isp = self.F_ave / (self.mdot_ave * g0)
+                
         # print result
         print("----------RESULT----------")
         print("Kstar =", self.Kstar)
-        print("O/F_init =", OF, "[-]")
-        print("It =", self.It, "[Ns]")
-        print("Lf =", Lf * 1000, "[mm]")
-        print("Df_init =", Df * 1000, "[mm]")
-        print("Df_final =", self.Df * 1000, "[mm]")
-        print("F_ave =", self.It * 1000 / self.k, "[N]")
+        print("Initial O/F =", OF, "[-]")
+        print("Total Impulse =", self.It, "[Ns]")
+        print("Fuel Length =", Lf * 1000, "[mm]")
+        print("Initial Port Diameter =", Df * 1000, "[mm]")
+        print("Final Port Diameter =", self.Df * 1000, "[mm]")
+        print("average Thrust =", self.F_ave, "[N]")
+        print("average Isp =", self.Isp, "[s]")
+
         print("end time evolution simulation")
         time_ms = list(range(len(self.F_arr)))
         evolution_result = np.stack([self.F_arr, self.F_fte_arr, self.Pt_arr, self.Pc_int_arr, self.OF_arr, self.mdot_arr, self.Df_arr, self.Cstar_arr, self.CF_arr, self.M_ox_arr, self.mdot_ox_arr, self.gamma_arr]).T

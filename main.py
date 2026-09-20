@@ -87,6 +87,21 @@ def run_time_evolution_mode():
     V_tank = inputvalues["Vol_ox"]
     P_final = inputvalues["Pt_end"]
     Dt = inputvalues["Dt"]
+    is_fast = inputvalues["is_fast"]
+
+    if isinstance(is_fast, int) != True:
+        print("invailed settings, set to normal mode")
+        is_fast = 1
+    elif is_fast == 1:
+        print("normal mode")
+    elif is_fast > 1:
+        print("fast mode")
+    else:
+        print("invailed settings, set to normal mode")
+        is_fast = 1
+
+    cea_interval = is_fast
+    # normal
 
     (_, _, _, _, _, _, _, evolution_result, _,) = sim.integration_simulation(
         Pc=Pc, lvlset_file=lvlset_file, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,

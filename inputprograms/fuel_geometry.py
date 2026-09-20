@@ -52,8 +52,8 @@ class FuelGeometry:
             self.max_x = settings["levelset"]["max_x"]
             self.min_y = settings["levelset"]["min_y"]
             self.max_y = settings["levelset"]["max_y"]
-            self.delta_x = (max_x - min_x)/N_x
-            self.delta_y = (max_y - min_y)/N_y
+            self.delta_x = (self.max_x - self.min_x)/self.N_x
+            self.delta_y = (self.max_y - self.min_y)/self.N_y
             self.symmetry = settings["levelset"]["symmetry"]
 
         if settings["mode"]=="geometry":

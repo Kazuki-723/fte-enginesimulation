@@ -1,0 +1,28 @@
+{
+    "mode": "geometry",//geometry or levelset
+    "geometry": {//境界を表すcsvファイルからレベルセット関数を計算
+        "culc_area": {
+            "max_x": 0.03, //計算領域の右端[m]
+            "min_x": -0.03, //計算領域の左端[m]
+            "N_x": 600, //左右方向の刻み数
+            "max_y": 0.03, //計算領域の上端[m]
+            "min_y": -0.03, //計算領域の下端[m]
+            "N_y": 600 //上下方向の刻み数
+        },
+        "geometry": [
+            {
+                "filename": "sample_geometry.csv",
+                "symmetry": 4//上下左右で対称なら4，そうでないなら1
+            }
+        ]
+    }, 
+    "levelset": {//既に計算したレベルセット関数を使う
+        "filename": "init_levelset.csv",
+        "max_x": 0.03,
+        "min_x": -0.03,
+        "max_y": 0.03,
+        "min_y": -0.03,
+        "symmetyry": 4
+    }, 
+    "output_initallevelset": true//計算したレベルセット関数をcsvファイルとして出力
+}

@@ -30,7 +30,7 @@ def run_initial_condition_mode():
     Pc_def = inputvalues["Pc_def"]
     OF_def = inputvalues["OF_def"]
     mdot_new = inputvalues["mdot_new"]
-    Df_init = inputvalues["Df_init"]
+    setting_filename = inputvalues["setting_file"] # Df_init = inputvalues["Df_init"]
     eta_cstar = inputvalues["eta_cstar"]
     eta_nozzle = inputvalues["eta_nozzle"]
     Ptank_init = inputvalues["Pt_init"]
@@ -40,7 +40,7 @@ def run_initial_condition_mode():
     n_ox = inputvalues["n_ox"]
 
     _, _, _ = sim.initial_convergence(
-        F_req, Pc_def, OF_def, mdot_new, Df_init,
+        F_req, Pc_def, OF_def, mdot_new, setting_filename,
         eta_cstar, eta_nozzle, Ptank_init,
         rho_ox_init, rho_f_start, a_ox, n_ox
     )
@@ -72,7 +72,9 @@ def run_time_evolution_mode():
     Pc = inputvalues["Pc_def"]
     OF = inputvalues["OF_def"]
     mdot = inputvalues["mdot_new"]
-    Df = inputvalues["Df_init"]
+    # Df = inputvalues["Df_init"]
+    lvlset_file = inputvalues["lvlset_init"]
+    culc_area = inputvalues["culc_area"]
     eta_cstar = inputvalues["eta_cstar"]
     eta_nozzle = inputvalues["eta_nozzle"]
     P_init = inputvalues["Pt_init"]
@@ -85,25 +87,11 @@ def run_time_evolution_mode():
     V_tank = inputvalues["Vol_ox"]
     P_final = inputvalues["Pt_end"]
     Dt = inputvalues["Dt"]
-    is_fast = inputvalues["is_fast"]
 
-    if isinstance(is_fast, int) != True:
-        print("invailed settings, set to normal mode")
-        is_fast = 1
-    elif is_fast == 1:
-        print("normal mode")
-    elif is_fast > 1:
-        print("fast mode")
-    else:
-        print("invailed settings, set to normal mode")
-        is_fast = 1
-
-    cea_interval = is_fast
-    # normal
     (_, _, _, _, _, _, _, evolution_result, _,) = sim.integration_simulation(
-        Pc=Pc, Df=Df, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,
+        Pc=Pc, lvlset_file=lvlset_file, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,
         epsilon=epsilon, Lf=Lf, mdot=mdot, V_tank=V_tank, P_init=P_init, P_final=P_final,
-        rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, F=F, Dt=Dt, cea_interval = cea_interval)
+        rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, F=F, Dt=Dt, culc_area=culc_area)
     
     # 結果出力
     print("input output csv filename(example.csv):")
@@ -112,7 +100,7 @@ def run_time_evolution_mode():
     try:
         # input記載用
         input_params = [
-                ("Pc", Pc), ("Df", Df), ("OF", OF),
+                ("Pc", Pc), ("lvlset_init", lvlset_file), ("OF", OF),
                 ("eta_cstar", eta_cstar), ("eta_nozzle", eta_nozzle), ("Kstar", Kstar),
                 ("epsilon", epsilon), ("Lf", Lf), ("mdot", mdot),
                 ("V_tank", V_tank), ("P_init", P_init), ("P_final", P_final),
@@ -128,7 +116,6 @@ def run_time_evolution_mode():
                 "Pc [MPa]",
                 "O/F [-]",
                 "mdot [kg/s]",
-                "Df [m]",
                 "C* [m/s]",
                 "CF [-]",
                 "tank mass [g]",

@@ -28,7 +28,7 @@ def make_gear(d, D, ratio, n:int):
         geometry[i+1] = [d/2*np.sin(theta[0]), d/2*np.cos(theta[0])]
         geometry[i+2] = [d/2*np.sin(theta[1]), d/2*np.cos(theta[1])]
         geometry[i+3] = [D/2*np.sin(theta[1]), D/2*np.cos(theta[1])]
-    print(f"analytical lp = {np.sum(np.linalg.norm(np.append(geometry[1:],geometry[0][np.newaxis,:],axis=0) - geometry,axis=1),axis=1)}")
+    print(f"analytical lp = {np.sum(np.linalg.norm(np.append(geometry[1:],geometry[0][np.newaxis,:],axis=0) - geometry,axis=1),axis=0)}")
     return geometry
 
 def koch_snowflake(order, scale=10):    # matplotのチュートリアルから丸パクリ
@@ -88,10 +88,10 @@ def dh_maxmin(geometry):
     
 
 if __name__=='__main__':
-    geometry = make_circle(0.034, [0,0], 360*1) # d[m], origin, 
+    #geometry = make_circle(0.034, [0,0], 360*1) # d[m], origin, 
     #geometry = make_gizagiza(0.02, 0.04, 4)
-    #geometry = make_gear(0.02, 0.04, (1,4), 8)
-    #geometry = interpolate_geometry(geometry, 360)
+    geometry = make_gear(0.02, 0.04, (1,4), 8)
+    geometry = interpolate_geometry(geometry, 360)
     # 点の間の距離の最大値最小値
     dh_maxmin(geometry)
     # 描画

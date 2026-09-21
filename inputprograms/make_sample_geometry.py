@@ -10,7 +10,7 @@ def make_circle(d, origin, N:int):  # d:穴の直径, origin:円の中心, N:点
     print(f"analytical Ap = {np.pi*d**2/4}")
     return geometry
 
-def make_gizagiza(d, D, n:int): # d:穴の直径, D:(d+ギザの高さ)/2, n:ギザの数
+def make_gizagiza(d, D, n:int): # d:穴の内径(最近接部長さ), D:穴の外径(最遠距離部長さ), n:ギザの数
     geometry = np.zeros((2*n,2))
     for i in range(n):
         geometry[2*i] = [D/2*np.sin(2*np.pi*(2*i)/(2*n)), D/2*np.cos(2*np.pi*(2*i)/(2*n))]
@@ -19,7 +19,7 @@ def make_gizagiza(d, D, n:int): # d:穴の直径, D:(d+ギザの高さ)/2, n:ギ
     print(f"analytical Ap = {1/2*D/2*d/2*np.sin(np.pi/n)*2*n}")
     return geometry
 
-def make_gear(d, D, ratio, n:int):
+def make_gear(d, D, ratio, n:int): # d:穴の内径(最近接部長さ), D:穴の外径(最遠距離部長さ), ratio:(内径部長さ:外径部長さ), n:ギザの数
     geometry = np.zeros((4*n,2))
     for i in range(0,4*n,4):
         center = 2*np.pi*(i+2)/(4*n)
@@ -31,7 +31,7 @@ def make_gear(d, D, ratio, n:int):
     print(f"analytical lp = {np.sum(np.linalg.norm(np.append(geometry[1:],geometry[0][np.newaxis,:],axis=0) - geometry,axis=1),axis=0)}")
     return geometry
 
-def koch_snowflake(order, scale=10):    # matplotのチュートリアルから丸パクリ
+def koch_snowflake(order, scale=10):  # order: koch曲線の再帰回数, scale: 最初の三角形の一辺
     """
     Return two lists x, y of point coordinates of the Koch snowflake.
 
@@ -91,11 +91,20 @@ def dh_maxmin(geometry):
     
 
 if __name__=='__main__':
-    #geometry = make_circle(0.034, [0,0], 360*1) # d[m], origin, 
+    """
+    形状パターン選択
+    circle  ：普通の円 d:穴の直径, origin:円の中心, N:点の数
+    gizagiza：星形形状 d:穴の内径(最近接部長さ), D:穴の外径(最遠距離部長さ), n:ギザの数
+    gear    ：歯車形状 d:穴の内径(最近接部長さ), D:穴の外径(最遠距離部長さ), ratio:(内径部長さ:外径部長さ), n:ギザの数
+    koch    ：コッホ曲線 order: koch曲線の再帰回数, scale: 最初の三角形の一辺
+    """
+    #geometry = make_circle(0.034, [0,0], 10) # d[m], origin, 
     #geometry = make_gizagiza(0.02, 0.04, 8)
-    #geometry = make_gear(0.02, 0.04, (1,4), 8)
-    geometry = koch_snowflake(10, 0.04)
-    #geometry = interpolate_geometry(geometry, 3600)
+    geometry = make_gear(0.02, 0.04, (1,10), 8)
+    #geometry = koch_snowflake(10, 0.04)
+
+    # 点群補完
+    geometry = interpolate_geometry(geometry, 3600)
     # 点の間の距離の最大値最小値
     dh_maxmin(geometry)
     # 描画

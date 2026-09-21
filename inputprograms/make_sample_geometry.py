@@ -63,7 +63,10 @@ def koch_snowflake(order, scale=10):    # matplotのチュートリアルから�
 
     points = _koch_snowflake_complex(order)
     x, y = points.real, points.imag
-    return x, y
+    geometry = np.zeros((len(x),2))
+    for i in range(len(x)):
+        geometry[i] = [x[i], y[i]]
+    return geometry
 
 def interpolate_geometry(geometry, N):  # geometryの点の間を直線で補完する．全体で点がN個になるように
     N -= len(geometry)
@@ -89,9 +92,10 @@ def dh_maxmin(geometry):
 
 if __name__=='__main__':
     #geometry = make_circle(0.034, [0,0], 360*1) # d[m], origin, 
-    #geometry = make_gizagiza(0.02, 0.04, 4)
-    geometry = make_gear(0.02, 0.04, (1,4), 8)
-    geometry = interpolate_geometry(geometry, 360)
+    #geometry = make_gizagiza(0.02, 0.04, 8)
+    #geometry = make_gear(0.02, 0.04, (1,4), 8)
+    geometry = koch_snowflake(10, 0.04)
+    #geometry = interpolate_geometry(geometry, 3600)
     # 点の間の距離の最大値最小値
     dh_maxmin(geometry)
     # 描画
@@ -99,4 +103,4 @@ if __name__=='__main__':
     ax.scatter(geometry[:,0], geometry[:,1], s=1, label="geometry")
     plt.show()
     # 保存
-    np.savetxt("sample_geometry.csv", geometry, fmt='%.6f', delimiter=",")
+    #np.savetxt("sample_geometry.csv", geometry, fmt='%.6f', delimiter=",")

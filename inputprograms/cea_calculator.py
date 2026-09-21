@@ -32,7 +32,7 @@ class RocketCEA:
             self.oxid_weights = np.array([0.0, 0.0, 0.0, 1.0])
 
             # Reactant temperatures
-            self.T_reactants = np.array([300.0, 300.0, 300.0, 300.0])
+            self.T_reactants  = np.array([300.0, 300.0, 300.0, 300.0])
 
         else:
             # MMA or other single-species fuel

@@ -101,6 +101,7 @@ if __name__=='__main__':
     # 描画
     fig, ax = plt.subplots()
     ax.scatter(geometry[:,0], geometry[:,1], s=1, label="geometry")
+    ax.set_aspect('equal', 'box')
     plt.show()
     # 保存
     #np.savetxt("sample_geometry.csv", geometry, fmt='%.6f', delimiter=",")

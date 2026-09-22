@@ -106,7 +106,7 @@ def run_time_evolution_mode():
     (_, _, _, _, _, _, _, evolution_result, _,) = sim.integration_simulation(
         Pc=Pc, lvlset_file=lvlset_file, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,
         epsilon=epsilon, Lf=Lf, mdot=mdot, V_tank=V_tank, P_init=P_init, P_final=P_final,
-        rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, F=F, Dt=Dt, culc_area=culc_area)
+        rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, F=F, Dt=Dt, culc_area=culc_area,cea_interval=cea_interval)
     
     # 結果出力
     print("input output csv filename(example.csv):")
@@ -135,7 +135,8 @@ def run_time_evolution_mode():
                 "CF [-]",
                 "tank mass [g]",
                 "mdot_ox [g/ms]",
-                "gamma [-]"
+                "gamma [-]",
+                "Af [m^2]"
             ]
 
         # データ本体出力

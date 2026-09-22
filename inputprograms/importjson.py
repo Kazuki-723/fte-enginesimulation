@@ -11,7 +11,7 @@ class JsoncLoader:
     def load(self) -> dict:
         """JSONC を読み込み、コメントを除去して dict を返す"""
         if not self.path.exists():
-            raise FileNotFoundError(f"cannot found json file: {self.path}")
+            raise FileNotFoundError(f"cannot find json file: {self.path}")
 
         text = self.path.read_text(encoding="utf-8")
 

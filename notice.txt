@@ -1,0 +1,38 @@
+CEA – Chemical Equilibrium with Applications
+
+Copyright (c) 2025, United States Government as represented by the Administrator of the National Aeronautics and Space Administration
+Licensed under the Apache License, Version 2.0.
+
+## Data
+
+### NASA CEA thermodynamic and transport databases
+- Paths: data/thermo.inp, data/trans.inp, data/thermo.lib, data/trans.lib
+- Source/References: NASA TP-2002-211556: https://ntrs.nasa.gov/api/citations/20020085330/downloads/20020085330.pdf
+
+### NASA RP-1311 example inputs/outputs
+- Paths: samples/*.inp, samples/*.out, source/bind/python/cea/samples/*.out
+- Source/References: NASA RP-1311 Part 2: https://ntrs.nasa.gov/api/citations/19960044559/downloads/19960044559.pdf
+
+----------------------------------------------------------------------
+Additional Notices for this distribution:
+----------------------------------------------------------------------
+FTE-engine simulation 
+
+Copyright 2026 FROM THE EARTH Tohoku University Student Rocket team
+Licensed under the Apache License, Version 2.0.
+
+## custom thermodynamic data references
+
+### MMA
+- T.A. Bolshova, et al. Combustion of spherical PMMA samples in still air simulated using a skeletal chemical kinetic mechanism, Fire Saf. J. 138 (2023) 103837.
+- https://www.sciencedirect.com/science/article/pii/S0379711223000759
+
+### ABS
+- M. Fabiani, et al. Numerical and experimental analysis of a 200n class GOX-ABS hybrid rocket engine, Aerosp. Sci. Technol. 168 (2026) 111157.
+- https://www.sciencedirect.com/science/article/pii/S1270963825012209
+- A.T. Wilkey et al. Sensitivity Study Regarding ABS Formulation on Hybrid Rocket Performance, Appl. Sci. 16, (2026), 8063.
+- https://www.mdpi.com/2076-3417/16/16/8063
+- G. Ndlovu, et al. Screening of metal additives in ABS polymer fuel for enhanced performance in hybrid rocket motors: a computational analysis using CEA, Def. Technol. 50 (2025) 176–184.
+- https://www.sciencedirect.com/science/article/pii/S2214914725000984
+
+Other theoritical references are shown in Readme.md.

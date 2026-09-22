@@ -4,6 +4,8 @@ from inputprograms.rocket_simulation import RocketSimulation
 from inputprograms.interp_density import OxidizerDatabase
 import re
 
+# 現在最新バージョンへの対応作業中
+# 動かす際は，旧バージョンのfletを使用するように 
 
 def main(page: ft.Page):
     page.title = "Rocket Simulation GUI"

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # 読み込むファイルの名前を入れる
-filename = "test.csv"
+filename = "test_lev.csv"
 df = pd.read_csv(filename, skiprows=9, header=0)
 
 columns = df.columns
@@ -11,19 +11,20 @@ data_arrays = {col: df[col].to_numpy() for col in columns}
 
 # arrays
 # F [N],F_fte [N],Ptank [MPa],Pc [MPa],O/F [-],mdot [kg/s],Df [m],C* [m/s],CF [-],tank mass [g],mdot_ox [g/ms],gamma [-]
-F_arr = data_arrays["F [N]"]
-F_fte_arr = data_arrays["F_fte [N]"]
-Pt_arr = data_arrays["Ptank [MPa]"]
-Pc_arr  = data_arrays["Pc [MPa]"]
-OF_arr = data_arrays["O/F [-]"]
-mdot_arr = data_arrays["mdot [kg/s]"]
-Df_arr = data_arrays["Df [m]"]
-Cstar_arr = data_arrays["C* [m/s]"]
-CF_arr  = data_arrays["CF [-]"]
+F_arr         = data_arrays["F [N]"]
+F_fte_arr     = data_arrays["F_fte [N]"]
+Pt_arr        = data_arrays["Ptank [MPa]"]
+Pc_arr        = data_arrays["Pc [MPa]"]
+OF_arr        = data_arrays["O/F [-]"]
+mdot_arr      = data_arrays["mdot [kg/s]"]
+#Df_arr       = data_arrays["Df [m]"]
+Cstar_arr     = data_arrays["C* [m/s]"]
+CF_arr        = data_arrays["CF [-]"]
 tank_mass_arr = data_arrays["tank mass [g]"]
-mdot_ox_arr = data_arrays["mdot_ox [g/ms]"]
-gamma_arr = data_arrays["gamma [-]"]
-mdot_f_arr = mdot_arr - mdot_ox_arr
+mdot_ox_arr   = data_arrays["mdot_ox [g/ms]"]
+gamma_arr     = data_arrays["gamma [-]"]
+mdot_f_arr    = mdot_arr - mdot_ox_arr
+af_arr        = data_arrays["Af [m^2]"]
 
 # make timearray
 time = np.arange(0, len(F_arr) / 1000, 0.001)
@@ -107,6 +108,19 @@ plt.plot(time, OF_arr, label="OF")
 plt.xlabel("Time [s]")
 plt.ylabel("OF ratio [-]")
 plt.title("OF ratio vs Time")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
+#--
+# 6. Af vs time
+#--
+plt.figure(figsize=(10, 5))
+plt.plot(time, af_arr, label="Af")
+plt.xlabel("Time [s]")
+plt.ylabel("surface area of fuel [m^2]")
+plt.title("fuel surface vs Time")
 plt.legend()
 plt.grid(True)
 plt.tight_layout()

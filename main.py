@@ -120,6 +120,7 @@ def run_initial_condition_mode():
     print("loading values:")
     for key, val in inputvalues.items():
         print(f"{key} = {val}")
+    print("end loading values")
 
     _ = sim.initial_convergence(
         F_req, Pc_def, OF_def, mdot_new, Df_init,
@@ -195,7 +196,9 @@ def run_time_evolution_mode():
     print("loading values:")
     for key, val in inputvalues.items():
         print(f"{key} = {val}")
+    print("end loading values")
 
+    # fast debugの値処理
     if is_fast == 1:
         print("normal mode")
     elif is_fast > 1:
@@ -204,8 +207,8 @@ def run_time_evolution_mode():
         print("invailed settings, set to normal mode")
         is_fast = 1
 
+    # cea計算のインターバル回数
     cea_interval = is_fast
-    # normal
     (_, _, _, _, _, _, _, evolution_result, _,) = sim.integration_simulation(
         Pc=Pc, Df=Df, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,
         epsilon=epsilon, Lf=Lf, mdot=mdot, V_tank=V_tank, P_init=Ptank_init, P_final=P_final,
@@ -224,7 +227,7 @@ def run_time_evolution_mode():
                 ("epsilon", epsilon), ("Lf", Lf), ("mdot", mdot),
                 ("V_tank", V_tank), ("P_init", Ptank_init), ("P_final", P_final),
                 ("rho_ox", rho_ox), ("rho_fuel", rho_f),
-                ("a", a_ox), ("n", n_ox), ("F", F), ("Dt", Dt)
+                ("a", a_ox), ("n", n_ox), ("F", F), ("Dt", Dt), ("Fuel Material",fuel_material)
             ]
         
         # 時間発展記載用

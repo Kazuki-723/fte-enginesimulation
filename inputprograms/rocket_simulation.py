@@ -403,7 +403,7 @@ class RocketSimulation:
         print("F_ave =", self.It * 1000 / self.k, "[N]")
         print("end time evolution simulation")
         time_ms = list(range(len(self.F_arr)))
-        evolution_result = np.stack([self.F_arr, self.F_fte_arr, self.Pt_arr, self.Pc_int_arr, self.OF_arr, self.mdot_arr, self.Cstar_arr, self.CF_arr, self.M_ox_arr, self.mdot_ox_arr, self.gamma_arr]).T
+        evolution_result = np.stack([self.F_arr, self.F_fte_arr, self.Pt_arr, self.Pc_int_arr, self.OF_arr, self.mdot_arr, self.Cstar_arr, self.CF_arr, self.M_ox_arr, self.mdot_ox_arr, self.gamma_arr, self.Af_arr]).T
         return time_ms, self.F_arr, self.F_fte_arr, self.OF_arr, self.Cstar_arr, self.Pc_int_arr, self.Pt_arr, evolution_result, self.It
     
     # GUIでグラフを書くためだけに存在する関数たち

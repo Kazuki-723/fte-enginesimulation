@@ -4,13 +4,16 @@ from skimage.measure import find_contours
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import time
-from inputprograms.importjson import JsoncLoader
-#from importjson import JsoncLoader
+#from inputprograms.importjson import JsoncLoader
+from importjson import JsoncLoader
+
+# delta_x = delta_y を前提にしている．
 
 class FuelGeometry:
     def __init__(self):
         self.r_arr=np.zeros(1)
 
+    # 燃料端面phi = 0の周回長さ計算
     def culc_lp(self, levelset, symmetry=1):
         #if symmetry==4:
         #    levelset = levelset[int(len(levelset)/2):,int(len(levelset)/2):]
@@ -19,7 +22,8 @@ class FuelGeometry:
         #if symmetry==4:
         #    lp*=4
         return lp
-        
+
+    # 燃料端面phi = 0の内部の面積計算
     def culc_Ap(self, levelset, symmetry=1):
         # eps = self.delta_x*c
         #if self.symmetry==4:
@@ -94,23 +98,38 @@ class FuelGeometry:
                 #---------------------
                 # levelset関数の計算
                 #---------------------
+                # Mesh生成
                 x = np.linspace(min_x, max_x, N_x)
                 y = np.linspace(min_y, max_y, N_y)
                 X,Y = np.meshgrid(x,y)
                 grid_points = np.column_stack((X.ravel(), Y.ravel()))
+                # 境界線の読み込み，境界線上の点座標を保有
                 lines = np.array([geometry, np.append(geometry[1:],geometry[0]).reshape(len(geometry),2)]).transpose(1,0,2)  # M行2列で各要素は1行2列(M,2,2)
+                # linesの各点とgrid_pointsの各座標の差分(x,y)を計算する
                 v_AP = grid_points[:,np.newaxis,:] - lines[:,0][np.newaxis,:,:]   # (N^2,1,2)+(1,M,2)->(N^2,M,2)
                 # 格子点と点の距離
+                # 全点計算
                 d_points = np.linalg.norm(v_AP, axis=2)
+                # 各gridに対する最小値の計算
                 d_points = np.min(d_points, axis=1) #(N^2,1)
-                #plt.figure("d_points")
-                #im  = plt.imshow(d_points.reshape((N_x,N_y)))
-                #plt.show()
+
+                # 距離関数の値をプロット
+                fig, ax = plt.subplots()
+                im  = ax.imshow(d_points.reshape((N_x,N_y)), vmin=min(d_points), vmax=max(d_points))
+                cbar = fig.colorbar(im)
+                cbar.set_label("Distance From phi = 0", fontsize=10)
+                plt.show()
+
                 # 境界の近くのみ線分との距離も計算
                 mask_near_border = d_points < 0.001    # (N',1)
-                #plt.figure("mask_near_border")
-                #im  = plt.imshow(mask_near_border.reshape((N_x,N_y)))
-                #plt.show()
+
+                # 距離関数が一定以下(上のmask)のみハイライトプロット
+                plt.figure("mask_near_border")
+                im  = plt.imshow(mask_near_border.reshape((N_x,N_y)))
+                plt.show()
+
+                # Meshの近傍点より近い点を探査する
+                # 読み切れてないのでまた後で
                 grid_points_nb = grid_points[mask_near_border]  #(N',1)
                 v_AP = grid_points_nb[:,np.newaxis,:] - lines[:,0][np.newaxis,:,:]   # (N',1,2)+(1,M,2)->(N',M,2)
                 v_BP = grid_points_nb[:,np.newaxis,:] - lines[:,1][np.newaxis,:,:]   # (N',M,2)
@@ -122,15 +141,16 @@ class FuelGeometry:
                 param_lines[:,0] = lines[:,0,1] - lines[:,1,1] # A=y1-y2
                 param_lines[:,1] = lines[:,1,0] - lines[:,0,0] # B=x2-x1
                 param_lines[:,2] = lines[:,0,0]*lines[:,1,1] - lines[:,1,0]*lines[:,0,1] # C=x1*y2-x2*y1
-                d_lines = (param_lines[:,0]*grid_points_nb[:,0][:,np.newaxis]+param_lines[:,1]*grid_points_nb[:,1][:,np.newaxis]+param_lines[:,2])**2/(param_lines[:,0]**2+param_lines[:,1]**2)*mask + ((max_x-min_x)*2+(max_y-min_y)*2)*~mask # (N', M)
+                d_lines = (param_lines[:,0]*grid_points_nb[:,0][:,np.newaxis]+param_lines[:,1]*grid_points_nb[:,1][:,np.newaxis]+param_lines[:,2])**2/ \
+                (param_lines[:,0]**2+param_lines[:,1]**2)*mask + ((max_x-min_x)*2+(max_y-min_y)*2)*~mask # (N', M)
                 d_lines = np.sqrt(np.min(d_lines, axis=1))   #(N',1)
                 levelset_new = d_points.copy()
                 levelset_new[mask_near_border] = np.min(np.stack((d_points[mask_near_border], d_lines), axis=1), axis=1)
                 levelset_new = levelset_new.reshape((N_x,N_y))
-                #plt.figure("updated")
-                #im  = plt.imshow(levelset_new-d_points.reshape((N_x,N_y)))
-                #plt.show()
-                # 符号
+                plt.figure("updated")
+                im  = plt.imshow(levelset_new-d_points.reshape((N_x,N_y)))
+                plt.show()
+                # 符号付の値に変換，内部が負
                 polygon = Path(geometry)
                 is_inside = polygon.contains_points(grid_points).reshape((N_x,N_y))
                 levelset_new[is_inside]*=-1
@@ -142,20 +162,22 @@ class FuelGeometry:
                 update = levelset_new < levelset
                 levelset = levelset*~update + levelset_new*update
         # 初期ポート断面積，周長の計算
-        A_p_init = self.culc_Ap(levelset)
-        l_p_init = self.culc_lp(levelset)
+        A_p_init = self.culc_Ap(levelset) # ポート断面積計算
+        l_p_init = self.culc_lp(levelset) # 周回長さ計算
 
         # 実行時間 
         end = time.perf_counter()
         print(f"Elapsed time: {end - start:.6f} seconds")
 
         # 結果を図にして表示
-        plt.figure("levelset")
-        im  = plt.imshow(levelset)
+        fig, ax = plt.subplots()
+        im  = ax.imshow(levelset, vmin=np.min(levelset), vmax=np.max(levelset))
+        cbar = fig.colorbar(im)
+        cbar.set_label("Distance From phi = 0", fontsize=10)
         # plt.axis((self.min_x, self.max_x, self.min_y, self.max_y))
-        levels = np.arange(0,5,1)
-        ctr = plt.contour(levelset, levels)#これを何回かごとに保存する．
-        plt.clabel(ctr, levels, inline=1)
+        levels = np.arange(0,0.01,1e-3)
+        ctr = ax.contour(levelset, levels)#これを何回かごとに保存する．
+        ax.clabel(ctr, levels, inline=1)
         plt.show()
 
         # 計算結果をcsvファイルに保存．（オプション）

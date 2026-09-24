@@ -317,18 +317,13 @@ class RocketSimulation:
 
             # rdot計算
             self.rdot = self.a_ox * (self.mdot_ox / self.Ap) ** self.n_ox
-            print(self.rdot)
             #燃料後退，反応表面積計算
             # self.Df = self.Df + (2 * self.rdot / 1000)
             self.levelset = geom.culc_levelset_t_evo(self.levelset, self.rdot, self.delta_t)
             self.Af = geom.culc_lp(self.levelset) * self.Lf
 
-            print("mdot_ox = ", self.mdot_ox, "[g/ms]")
-            print("mdot_f = ", self.mdot_f, "[g/ms]")
-
             # OF算出
             self.OF_tmp1 = self.mdot_ox / self.mdot_f
-            print("OF_tmp1", self.OF_tmp1)
 
             # CEA計算
             if self.k % self.cea_interval == 0:
@@ -346,12 +341,10 @@ class RocketSimulation:
             self.F_fte = self.eta * ((self.mdot_ox + self.mdot_f) * self.a_tmp1 * self.Mach_tmp1 + (self.Pe_tmp1 - self.Pa_tmp1) * self.Ae_new * 1e6)
             
             # CFの圧力補正
-            self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_tmp1
+            #self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_tmp1
             self.F_new = self.eta * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) * self.CF_tmp1
 
             # 酸化剤残量の更新
-            print("F = ", self.F_new)
-            print("Pe = ", self.Pe_tmp1)
             self.Mass_ox_remain = self.Mass_ox_remain - self.mdot_ox
 
             # 次iterationへ投げる圧力の計算
@@ -360,14 +353,22 @@ class RocketSimulation:
             self.k = self.k + 1
 
             # iteration log terminal管理
-            print("Pc_tmp1 = ", self.Pc_tmp1)
-            print("Ptank_tmp1 = ", self.Ptank_tmp1)
-            print("Pt = ", self.Ptank_tmp1)
-            print("Mass_ox = ", self.Mass_ox)
-            print("Remain ox = ", self.Mass_ox_remain)
-            print("Lf = ", self.Lf)
-            print("k = ", self.k)
-            print("---------------")
+            self.log_iter = 200 # このiterごとに結果をprintする
+            if self.k % self.log_iter == 0:
+                print(self.rdot)
+                print("mdot_ox = ", self.mdot_ox, "[g/ms]")
+                print("mdot_f = ", self.mdot_f, "[g/ms]")
+                print("OF_tmp1", self.OF_tmp1)
+                print("F = ", self.F_new)
+                print("Pe = ", self.Pe_tmp1)
+                print("Pc_tmp1 = ", self.Pc_tmp1)
+                print("Ptank_tmp1 = ", self.Ptank_tmp1)
+                print("Pt = ", self.Ptank_tmp1)
+                print("Mass_ox = ", self.Mass_ox)
+                print("Remain ox = ", self.Mass_ox_remain)
+                print("Lf = ", self.Lf)
+                print("k = ", self.k)
+                print("---------------")
 
             pbar.update(1)  # 進捗を増やす
             # 配列管理

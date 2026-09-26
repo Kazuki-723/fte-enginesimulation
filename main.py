@@ -95,7 +95,7 @@ def run_initial_condition_mode():
     "rho_f": float,
     "a_ox": float,
     "n_ox": float,
-    #"fuel_material": str,
+    "fuel_material": str,
     }
 
     # キー欠損，余剰，型チェック
@@ -118,6 +118,7 @@ def run_initial_condition_mode():
     rho_f_start = inputvalues["rho_f"]
     a_ox = inputvalues["a_ox"]
     n_ox = inputvalues["n_ox"]
+    fuel_material = inputvalues["fuel_material"]
 
     # Ptからrho_oxを計算
     _, rho_ox = sim.calc_rho_ox(inputvalues["Pt_init"], "liquid")
@@ -131,7 +132,7 @@ def run_initial_condition_mode():
     _, _, _ = sim.initial_convergence(
         F_req, Pc_def, OF_def, mdot_new, setting_filename,
         eta_cstar, eta_nozzle, Ptank_init,
-        rho_ox, rho_f_start, a_ox, n_ox
+        rho_ox, rho_f_start, a_ox, n_ox, fuel_material
     )
 
 # -------------------------
@@ -164,7 +165,7 @@ def run_time_evolution_mode():
         "rho_f": float,
         "a_ox": float,
         "n_ox": float,
-        #"fuel_material": str,
+        "fuel_material": str,
         "Kstar": float,
         "epsilon": float,
         "Lf": float,
@@ -191,6 +192,7 @@ def run_time_evolution_mode():
     rho_f = inputvalues["rho_f"]
     a_ox = inputvalues["a_ox"]
     n_ox = inputvalues["n_ox"]
+    fuel_material = inputvalues["fuel_material"]
     Kstar = inputvalues["Kstar"]
     epsilon = inputvalues["epsilon"]
     Lf = inputvalues["Lf"]
@@ -224,7 +226,8 @@ def run_time_evolution_mode():
     (_, _, _, _, _, _, _, evolution_result, _,) = sim.integration_simulation(
         Pc=Pc, lvlset_file=lvlset_file, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,
         epsilon=epsilon, Lf=Lf, mdot=mdot, V_tank=V_tank, P_init=P_init, P_final=P_final,
-        rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, F=F, Dt=Dt, culc_area=culc_area,cea_interval=cea_interval)
+        rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, fuel_material = fuel_material,
+        F=F, Dt=Dt, culc_area=culc_area,cea_interval=cea_interval)
     
     # 結果出力
     print("input output csv filename(example.csv):")
@@ -238,7 +241,7 @@ def run_time_evolution_mode():
                 ("epsilon", epsilon), ("Lf", Lf), ("mdot", mdot),
                 ("V_tank", V_tank), ("P_init", P_init), ("P_final", P_final),
                 ("rho_ox", rho_ox), ("rho_fuel", rho_f),
-                ("a", a_ox), ("n", n_ox), ("F", F), ("Dt", Dt)
+                ("a", a_ox), ("n", n_ox), ("F", F), ("Dt", Dt), ("Fuel Material",fuel_material)
             ]
         
         # 時間発展記載用

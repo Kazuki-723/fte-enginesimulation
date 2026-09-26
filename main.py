@@ -3,6 +3,69 @@ from inputprograms.rocket_simulation import RocketSimulation
 from inputprograms.importjson import JsoncLoader
 sim = RocketSimulation()
 
+# 入力のjsonエラー判定関数
+def validate_inputs(required_keys: dict, inputvalues: dict):
+    """
+    required_keys: {"key_name": expected_type}
+    inputvalues: JSONC から読み込んだ dict
+    """
+
+    errors = []
+
+    # -------------------------
+    # 1. 欠損キーのチェック
+    #--------------------------
+    missing_keys = [key for key in required_keys if key not in inputvalues]
+    if missing_keys:
+        errors.append("Missing required keys:")
+        for key in missing_keys:
+            errors.append(f"  - {key}")
+
+    # -------------------------
+    # 2. 型チェック
+    #--------------------------
+    type_errors = []
+    for key, expected_type in required_keys.items():
+        if key in inputvalues:
+            val = inputvalues[key]
+            if expected_type is float:
+                if not isinstance(val, (int, float)):
+                    type_errors.append(f"{key}: expected float, got {type(val).__name__}")
+            elif expected_type is str:
+                if not isinstance(val, str):
+                    type_errors.append(f"{key}: expected str, got {type(val).__name__}")
+            elif expected_type is int:
+                if not isinstance(val, int):
+                    type_errors.append(f"{key}: expected int, got {type(val).__name__}")
+            elif expected_type is list:
+                if not isinstance(val, list):
+                    type_errors.append(f"{key}: expected int, got {type(val).__name__}")
+            else:
+                type_errors.append(f"{key}: unknown expected type {expected_type}")
+
+    if type_errors:
+        errors.append("Invalid types:")
+        for err in type_errors:
+            errors.append(f"  - {err}")
+
+    # -------------------------
+    # 3. 不要キーのチェック
+    #--------------------------
+    extra_keys = [key for key in inputvalues if key not in required_keys]
+    if extra_keys:
+        errors.append("Extra keys found (not used by simulation):")
+        for key in extra_keys:
+            errors.append(f"  - {key}")
+
+    # -------------------------
+    # 4. エラーがあればまとめて出力して終了
+    #--------------------------
+    if errors:
+        print("ERROR: Invalid JSON input detected:")
+        for e in errors:
+            print(e)
+        exit(1)
+
 # -------------------------
 # 初期条件計算モード
 # -------------------------
@@ -18,31 +81,57 @@ def run_initial_condition_mode():
         print(f"loading error: {e}")
         exit(1)
 
+    # 入力エラー判定用正解の提示
+    required_keys_init = {
+    "F_req": float,
+    "Pc_def": float,
+    "OF_def": float,
+    "mdot_new": float,
+    "Df_init": float,
+    "eta_cstar": float,
+    "eta_nozzle": float,
+    "setting_file": str,
+    "Pt_init": float,
+    "rho_f": float,
+    "a_ox": float,
+    "n_ox": float,
+    #"fuel_material": str,
+    }
+
+    # キー欠損，余剰，型チェック
+    validate_inputs(required_keys_init, inputvalues)
+
     print("loading values:")
     for key, val in inputvalues.items():
         print(f"{key} = {val}")
-
-    # Ptからrho_oxを計算
-    _, rho_ox = sim.calc_rho_ox(inputvalues["Pt_init"], "liquid")
 
     # initial_convergence()に投げる部分
     F_req = inputvalues["F_req"]
     Pc_def = inputvalues["Pc_def"]
     OF_def = inputvalues["OF_def"]
     mdot_new = inputvalues["mdot_new"]
-    setting_filename = inputvalues["setting_file"] # Df_init = inputvalues["Df_init"]
+    # Df_init = inputvalues["Df_init"]
     eta_cstar = inputvalues["eta_cstar"]
     eta_nozzle = inputvalues["eta_nozzle"]
+    setting_filename = inputvalues["setting_file"]
     Ptank_init = inputvalues["Pt_init"]
-    rho_ox_init = rho_ox
     rho_f_start = inputvalues["rho_f"]
     a_ox = inputvalues["a_ox"]
     n_ox = inputvalues["n_ox"]
 
+    # Ptからrho_oxを計算
+    _, rho_ox = sim.calc_rho_ox(inputvalues["Pt_init"], "liquid")
+
+     # 入力チェック後にinput提示
+    print("loading values:")
+    for key, val in inputvalues.items():
+        print(f"{key} = {val}")
+    print("end loading values")
+
     _, _, _ = sim.initial_convergence(
         F_req, Pc_def, OF_def, mdot_new, setting_filename,
         eta_cstar, eta_nozzle, Ptank_init,
-        rho_ox_init, rho_f_start, a_ox, n_ox
+        rho_ox, rho_f_start, a_ox, n_ox
     )
 
 # -------------------------
@@ -60,12 +149,33 @@ def run_time_evolution_mode():
         print(f"loading error: {e}")
         exit(1)
 
-    print("loading values:")
-    for key, val in inputvalues.items():
-        print(f"{key} = {val}")
+    # 入力エラー判定用正解の提示
+    required_keys_time = {
+        "F_init": float,
+        "Pc_def": float,
+        "OF_def": float,
+        "mdot_new": float,
+        "Df_init": float,
+        "lvlset_init": str,
+        "culc_area": list,
+        "eta_cstar": float,
+        "eta_nozzle": float,
+        "Pt_init": float,
+        "rho_f": float,
+        "a_ox": float,
+        "n_ox": float,
+        #"fuel_material": str,
+        "Kstar": float,
+        "epsilon": float,
+        "Lf": float,
+        "Vol_ox": float,
+        "Pt_end": float,
+        "Dt": float,
+        "is_fast": int,
+    }
 
-    # Ptからrho_oxを計算
-    _, rho_ox = sim.calc_rho_ox(inputvalues["Pt_init"], "liquid")
+    # キー欠損，余剰，型チェック
+    validate_inputs(required_keys_time, inputvalues)
 
     # integration_simulation()に投げる部分
     F = inputvalues["F_init"]
@@ -88,6 +198,14 @@ def run_time_evolution_mode():
     P_final = inputvalues["Pt_end"]
     Dt = inputvalues["Dt"]
     is_fast = inputvalues["is_fast"]
+
+    # Ptからrho_oxを計算
+    _, rho_ox = sim.calc_rho_ox(inputvalues["Pt_init"], "liquid")
+
+    print("loading values:")
+    for key, val in inputvalues.items():
+        print(f"{key} = {val}")
+    
 
     if isinstance(is_fast, int) != True:
         print("invailed settings, set to normal mode")

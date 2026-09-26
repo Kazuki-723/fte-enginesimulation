@@ -5,6 +5,7 @@ from inputprograms.fuel_geometry import FuelGeometry
 from inputprograms.iteration_logger import IterationLogger
 from inputprograms.interp_density import OxidizerDatabase
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 # 定数定義
 R_univ = 8314 # 一般気体定数 [mJ/mol-K]
@@ -400,6 +401,12 @@ class RocketSimulation:
         # print("Df_final = ", self.Df * 1000, "[mm]")
         print("F_ave =", self.It * 1000 / self.k, "[N]")
         print("end time evolution simulation")
+        fig,ax = plt.subplots()
+        im  = ax.imshow(self.levelset, vmin=np.min(self.levelset), vmax=np.max(self.levelset))
+        levels = [-1*np.sum(geom.r_arr), 0]
+        ctr = ax.contour(self.levelset, levels)
+        ax.clabel(ctr, levels, inline=1)
+        plt.savefig("int_end.png")
         time_ms = list(range(len(self.F_arr)))
         evolution_result = np.stack([self.F_arr, self.F_fte_arr, self.Pt_arr, self.Pc_int_arr, self.OF_arr, self.mdot_arr, self.Cstar_arr, self.CF_arr, self.M_ox_arr, self.mdot_ox_arr, self.gamma_arr, self.Af_arr]).T
         return time_ms, self.F_arr, self.F_fte_arr, self.OF_arr, self.Cstar_arr, self.Pc_int_arr, self.Pt_arr, evolution_result, self.It

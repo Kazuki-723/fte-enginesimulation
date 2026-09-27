@@ -4,7 +4,7 @@ import numpy as np
 
 # 読み込むファイルの名前を入れる
 filename = "test_lev.csv"
-df = pd.read_csv(filename, skiprows=9, header=0)
+df = pd.read_csv(filename, skiprows=10, header=0)
 
 columns = df.columns
 data_arrays = {col: df[col].to_numpy() for col in columns}

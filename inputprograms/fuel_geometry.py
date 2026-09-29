@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.ndimage import distance_transform_edt
+from scipy.spatial import cKDTree
 from skimage.measure import find_contours
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
@@ -99,19 +100,32 @@ class FuelGeometry:
                 # levelset関数の計算
                 #---------------------
                 # Mesh生成
+                # x = np.linspace(min_x, max_x, N_x)
+                # y = np.linspace(min_y, max_y, N_y)
+                # X,Y = np.meshgrid(x,y)
+                # grid_points = np.column_stack((X.ravel(), Y.ravel()))
+                # # 境界線の読み込み，境界線上の点座標を保有
+                lines = np.array([geometry, np.append(geometry[1:],geometry[0]).reshape(len(geometry),2)]).transpose(1,0,2)  # M行2列で各要素は1行2列(M,2,2)
+                # # linesの各点とgrid_pointsの各座標の差分(x,y)を計算する
+                # v_AP = grid_points[:,np.newaxis,:] - lines[:,0][np.newaxis,:,:]   # (N^2,1,2)+(1,M,2)->(N^2,M,2)
+                # # 格子点と点の距離
+                # # 全点計算
+                # d_points = np.linalg.norm(v_AP, axis=2)
+                # # 各gridに対する最小値の計算
+                # d_points = np.min(d_points, axis=1) #(N^2,1)
+
+                # KD-Treeによる近傍探査を実装
+                # phi=0 の点群を KD-tree に格納
+                tree = cKDTree(geometry)
+
+                # Mesh生成
                 x = np.linspace(min_x, max_x, N_x)
                 y = np.linspace(min_y, max_y, N_y)
-                X,Y = np.meshgrid(x,y)
+                X, Y = np.meshgrid(x, y)
                 grid_points = np.column_stack((X.ravel(), Y.ravel()))
-                # 境界線の読み込み，境界線上の点座標を保有
-                lines = np.array([geometry, np.append(geometry[1:],geometry[0]).reshape(len(geometry),2)]).transpose(1,0,2)  # M行2列で各要素は1行2列(M,2,2)
-                # linesの各点とgrid_pointsの各座標の差分(x,y)を計算する
-                v_AP = grid_points[:,np.newaxis,:] - lines[:,0][np.newaxis,:,:]   # (N^2,1,2)+(1,M,2)->(N^2,M,2)
-                # 格子点と点の距離
-                # 全点計算
-                d_points = np.linalg.norm(v_AP, axis=2)
-                # 各gridに対する最小値の計算
-                d_points = np.min(d_points, axis=1) #(N^2,1)
+
+                # 最近傍距離計算
+                d_points, idx = tree.query(grid_points)  # idx は最近傍点の index，使わないけど取っておく
 
                 # 距離関数の値をプロット
                 fig, ax = plt.subplots()
@@ -171,13 +185,14 @@ class FuelGeometry:
 
         # 結果を図にして表示
         fig, ax = plt.subplots()
-        im  = ax.imshow(levelset, vmin=np.min(levelset), vmax=np.max(levelset))
+        im  = ax.imshow(levelset, vmin=np.min(levelset), vmax=np.max(levelset), cmap = "coolwarm")
         cbar = fig.colorbar(im)
         cbar.set_label("Distance From phi = 0", fontsize=10)
         # plt.axis((self.min_x, self.max_x, self.min_y, self.max_y))
-        levels = np.arange(0,0.01,1e-3)
-        ctr = ax.contour(levelset, levels)#これを何回かごとに保存する．
+        levels = np.arange(0,0.01,2e-3)
+        ctr = ax.contour(levelset, levels, colors="black")#これを何回かごとに保存する．
         ax.clabel(ctr, levels, inline=1)
+        plt.title("phi = 960 dots Nx = Ny = 600")
         plt.show()
 
         # 計算結果をcsvファイルに保存．（オプション）

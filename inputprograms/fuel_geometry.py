@@ -129,7 +129,7 @@ class FuelGeometry:
 
                 # 距離関数の値をプロット
                 fig, ax = plt.subplots()
-                im  = ax.imshow(d_points.reshape((N_x,N_y)), vmin=min(d_points), vmax=max(d_points))
+                im  = ax.imshow(d_points.reshape((N_x,N_y)), vmin=np.min(d_points), vmax=np.max(d_points))
                 cbar = fig.colorbar(im)
                 cbar.set_label("Distance From phi = 0", fontsize=10)
                 plt.show()
@@ -143,27 +143,87 @@ class FuelGeometry:
                 plt.show()
 
                 # Meshの近傍点より近い点を探査する
-                # 読み切れてないのでまた後で
-                grid_points_nb = grid_points[mask_near_border]  #(N',1)
-                v_AP = grid_points_nb[:,np.newaxis,:] - lines[:,0][np.newaxis,:,:]   # (N',1,2)+(1,M,2)->(N',M,2)
-                v_BP = grid_points_nb[:,np.newaxis,:] - lines[:,1][np.newaxis,:,:]   # (N',M,2)
-                v_AB = lines[:,1][np.newaxis,:,:] - lines[:,0][np.newaxis,:,:]  # (1,M,2)            
-                # 線分の両端から格子点への角度がどちらも90°以下，つまり線分の両端より線分の方が近い場合を抽出
-                mask = (np.sum(v_AP*v_AB,axis=2)>0)&(np.sum(v_BP*v_AB,axis=2)<0).astype(bool)  # (N',M)
-                # 格子点と直線の距離 d^2 = (A*x+B*y+C)**2/(A**2+B**2)   A,B,C:linesから　x,y:pointsから
-                param_lines = np.zeros((len(lines),3))  # (M,3)
-                param_lines[:,0] = lines[:,0,1] - lines[:,1,1] # A=y1-y2
-                param_lines[:,1] = lines[:,1,0] - lines[:,0,0] # B=x2-x1
-                param_lines[:,2] = lines[:,0,0]*lines[:,1,1] - lines[:,1,0]*lines[:,0,1] # C=x1*y2-x2*y1
-                d_lines = (param_lines[:,0]*grid_points_nb[:,0][:,np.newaxis]+param_lines[:,1]*grid_points_nb[:,1][:,np.newaxis]+param_lines[:,2])**2/ \
-                (param_lines[:,0]**2+param_lines[:,1]**2)*mask + ((max_x-min_x)*2+(max_y-min_y)*2)*~mask # (N', M)
-                d_lines = np.sqrt(np.min(d_lines, axis=1))   #(N',1)
+                # linesのベクトル計算
+                # grid_points_nb = grid_points[mask_near_border]  #(N',1)
+                # v_AP = grid_points_nb[:,np.newaxis,:] - lines[:,0][np.newaxis,:,:]   # (N',1,2)+(1,M,2)->(N',M,2)
+                # v_BP = grid_points_nb[:,np.newaxis,:] - lines[:,1][np.newaxis,:,:]   # (N',M,2)
+                # v_AB = lines[:,1][np.newaxis,:,:] - lines[:,0][np.newaxis,:,:]  # (1,M,2)
+
+                # # 線分の両端から格子点への角度がどちらも90°以下，つまり線分の両端より線分の方が近い場合を抽出
+                # mask = (np.sum(v_AP*v_AB,axis=2)>0)&(np.sum(v_BP*v_AB,axis=2)<0).astype(bool)  # (N',M)
+
+                # # 格子点と直線の距離 d^2 = (A*x+B*y+C)**2/(A**2+B**2)   A,B,C:linesから　x,y:pointsから
+                # # 線分直線方程式 Ax + By + C = 0の係数導出
+                # param_lines = np.zeros((len(lines),3))  # (M,3)
+                # param_lines[:,0] = lines[:,0,1] - lines[:,1,1] # A=y1-y2
+                # param_lines[:,1] = lines[:,1,0] - lines[:,0,0] # B=x2-x1
+                # param_lines[:,2] = lines[:,0,0]*lines[:,1,1] - lines[:,1,0]*lines[:,0,1] # C=x1*y2-x2*y1
+
+                # # 直線方程式と点の距離計算　d^2 = (A*x+B*y+C)**2/(A**2+B**2)
+                # d_lines = (param_lines[:,0]*grid_points_nb[:,0][:,np.newaxis]+param_lines[:,1]*grid_points_nb[:,1][:,np.newaxis]+param_lines[:,2])**2/ \
+                # (param_lines[:,0]**2+param_lines[:,1]**2)*mask + ((max_x-min_x)*2+(max_y-min_y)*2)*~mask # (N', M)
+                
+                # # 上のsqrtをとる
+                # d_lines = np.sqrt(np.min(d_lines, axis=1))   #(N',1)
+                
+                # 境界線近傍の格子点だけ抽出
+                grid_points_nb = grid_points[mask_near_border]   # (N',2)
+
+                # --- KD-tree による最近傍端点の取得 ---
+                # 最近傍端点の index を取得
+                _, idx = tree.query(grid_points_nb)  # idx: (N',)
+
+                # 最近傍端点に隣接する線分候補を抽出
+                # 端点 idx は geometry の点なので、線分 lines のどちらかに属する
+                # → その端点を含む線分だけ距離計算すればよい
+                # ただし閉曲線なので idx-1 と idx の線分が候補
+                seg_idx1 = idx
+                seg_idx2 = (idx - 1) % len(lines)
+
+                # 候補線分をまとめる（各格子点に対して2本）
+                A = np.stack((lines[seg_idx1,0], lines[seg_idx2,0]), axis=1)  # (N',2,2)
+                B = np.stack((lines[seg_idx1,1], lines[seg_idx2,1]), axis=1)  # (N',2,2)
+
+                # --- 線分距離計算（既存コードと同じロジック） ---
+
+                # ベクトル
+                v_AP = grid_points_nb[:,None,:] - A        # (N',2,2)
+                v_BP = grid_points_nb[:,None,:] - B        # (N',2,2)
+                v_AB = B - A                               # (N',2,2)
+
+                # 射影が線分内部にあるか判定
+                mask = (np.sum(v_AP*v_AB,axis=2)>0) & (np.sum(v_BP*v_AB,axis=2)<0)  # (N',2)
+
+                # 直線一般式の係数 A,B,C を計算
+                param_A = A[:,:,1] - B[:,:,1]   # (N',2)
+                param_B = B[:,:,0] - A[:,:,0]   # (N',2)
+                param_C = A[:,:,0]*B[:,:,1] - B[:,:,0]*A[:,:,1]  # (N',2)
+
+                # 直線距離（平方）
+                d2 = (param_A*grid_points_nb[:,0][:,None] +
+                    param_B*grid_points_nb[:,1][:,None] +
+                    param_C)**2 / (param_A**2 + param_B**2)
+
+                # mask=False の線分は巨大値にする
+                big = ((max_x-min_x)*2 + (max_y-min_y)*2)
+                d2 = d2*mask + big*(~mask)
+
+                # 線分距離の最小値
+                d_lines = np.sqrt(np.min(d2, axis=1))  # (N',)
+
+                # levelset関数の更新
                 levelset_new = d_points.copy()
                 levelset_new[mask_near_border] = np.min(np.stack((d_points[mask_near_border], d_lines), axis=1), axis=1)
                 levelset_new = levelset_new.reshape((N_x,N_y))
-                plt.figure("updated")
-                im  = plt.imshow(levelset_new-d_points.reshape((N_x,N_y)))
+
+                # 更新データのplot
+                update_diff = levelset_new-d_points.reshape((N_x,N_y))
+                fig, ax = plt.subplots()
+                im  = ax.imshow(update_diff, vmin=np.min(update_diff), vmax=np.max(update_diff))
+                cbar = fig.colorbar(im)
+                cbar.set_label("(update levelset) - (old point distance)", fontsize=10)
                 plt.show()
+
                 # 符号付の値に変換，内部が負
                 polygon = Path(geometry)
                 is_inside = polygon.contains_points(grid_points).reshape((N_x,N_y))

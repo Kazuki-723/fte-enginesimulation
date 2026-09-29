@@ -1,6 +1,5 @@
 import numpy as np
 import math
-#from inputprograms.cea_interface import CEAInterface
 from inputprograms.fuel_geometry import FuelGeometry
 from inputprograms.iteration_logger import IterationLogger
 from inputprograms.interp_density import OxidizerDatabase
@@ -22,9 +21,9 @@ class RocketSimulation:
         self.diffuse_deg   = diffuse_deg
 
         # クラス定義
-        self.ox_db         = OxidizerDatabase()
-        self.iter_logger   = IterationLogger()
-        self.geom          = FuelGeometry()
+        self.ox_db         = OxidizerDatabase() # N2O密度曲線補完
+        self.iter_logger   = IterationLogger()  # GUI用グラフクラス
+        self.geom          = FuelGeometry()     # 燃料形状計算
 
         # 積分計算用の配列初期化
         self.Pt_arr        = np.array([])
@@ -67,8 +66,8 @@ class RocketSimulation:
         T_t_tmp1      = throat_props["T"]
         T_e_tmp1      = exit_props["T"]
         Mole_tmp1     = chamber_props["MW"]
-        Pthroat_tmp1  = throat_props["P"] / 10
-        Pe_tmp1       = exit_props["P"] / 10
+        Pthroat_tmp1  = throat_props["P"] / 10 # barr to MPa
+        Pe_tmp1       = exit_props["P"] / 10   # barr to MPa
         Mach_tmp1     = exit_props["Mach"]
         a_tmp1        = np.sqrt(exit_props['gamma'] * R_univ / exit_props["MW"] * T_e_tmp1)
         epsilon       = exit_props["epsilon"]
@@ -92,7 +91,7 @@ class RocketSimulation:
         self.OF_def        = OF_def
         self.mdot_new      = mdot_new
         self.mdot_old      = mdot_new
-        # self.Df_init = Df_init
+        # self.Df_init     = Df_init
         self.eta_cstar     = eta_cstar
         self.eta_nozzle    = eta_nozzle
         self.eta           = eta_cstar * eta_nozzle
@@ -145,6 +144,8 @@ class RocketSimulation:
                  self.T_t_tmp1, self.T_e_tmp1, self.Mole_tmp1, self.Pthroat_tmp1,
                  self.Pe_tmp1, self.Mach_tmp1, self.a_tmp1, _) = RocketSimulation.cea_compute(self, self.fuel_material, self.Pc_def, self.OF_def, epsilon = self.epsilon_new)
 
+            # CFの圧力補正
+            self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_def
 
             # 出口速度計算
             self.R_tmp1  = self.R_univ / self.Mole_tmp1
@@ -162,7 +163,6 @@ class RocketSimulation:
             self.epsilon_new = self.Ae_new / self.At_new
 
             #推力計算
-            self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_def
             self.F       = self.CF_tmp1 * self.Cstar_tmp1 * self.eta * self.mdot_new
             self.diff_F  = self.F_req - self.F
 
@@ -201,6 +201,7 @@ class RocketSimulation:
 
         # O/F, 燃料形状
         self.OF_tmp1 = self.mdot_ox_init / self.mdot_f_init
+        # levelset関数の計算
         _, self.A_p, self.l_p = self.geom.culc_initial_levelset(setting_filename)
 
         # 定義したOFを実現するのに必要な燃焼面積

@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
+from scipy.spatial import cKDTree
 import os
 import sys
 import time
@@ -56,8 +57,6 @@ def compute_levelset_bruteforce(grid_points, lines, geometry, N_x, N_y, max_x, m
 # ============================================================
 # 2. KD-tree 最適化版による距離場の計算
 # ============================================================
-
-from scipy.spatial import cKDTree
 
 def compute_levelset_kdtree(grid_points, lines, geometry, N_x, N_y, max_x, min_x, max_y, min_y):
     tree = cKDTree(geometry)

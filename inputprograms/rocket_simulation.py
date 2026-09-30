@@ -166,6 +166,7 @@ class RocketSimulation:
             self.F       = self.CF_tmp1 * self.Cstar_tmp1 * self.eta * self.mdot_new
             self.diff_F  = self.F_req - self.F
 
+            # throat直径と出口直径の計算
             self.Dt = 2 * np.sqrt(self.At_new / math.pi)
             self.De = 2 * np.sqrt(self.Ae_new / math.pi)
 
@@ -199,7 +200,7 @@ class RocketSimulation:
         # Kstar = Discharge coef. * orifice cross section
         self.Kstar = self.mdot_ox_init / np.sqrt(2 * self.rho_ox_init * ((self.Ptank_init - self.Pc_def) * 1e6))
 
-        # O/F, 燃料形状
+        # O/F
         self.OF_tmp1 = self.mdot_ox_init / self.mdot_f_init
         # levelset関数の計算
         _, self.A_p, self.l_p = self.geom.culc_initial_levelset(setting_filename)
@@ -380,15 +381,11 @@ class RocketSimulation:
                 CF_atm       = self.CF_tmp1
                 self.CF_tmp1 = CF_atm + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_tmp1
 
-
             # 気体物性値評価
             self.R_tmp1 = self.R_univ / self.Mole_tmp1  # 気体定数
 
             # 推力の計算
             self.F_fte  = self.eta * ((self.mdot_ox + self.mdot_f) * self.a_tmp1 * self.Mach_tmp1 + (self.Pe_tmp1 - self.Pa_tmp1) * self.Ae_new * 1e6)
-            
-            # CFの圧力補正
-            #self.CF_tmp1 = self.CF_tmp1 + (self.Pe_tmp1 - self.Pa) * self.epsilon_new / self.Pc_tmp1
             self.F_new  = self.eta * self.Cstar_tmp1 * (self.mdot_ox + self.mdot_f) * self.CF_tmp1
 
             # 酸化剤残量の更新
@@ -456,7 +453,7 @@ class RocketSimulation:
         print("end time evolution simulation")
 
         # 燃料後退の出力
-        fig,ax = plt.subplots()
+        fig, ax = plt.subplots()
         im  = ax.imshow(self.levelset, vmin=np.min(self.levelset), vmax=np.max(self.levelset))
         levels = [-1*np.sum(self.geom.r_arr), 0]
         ctr = ax.contour(self.levelset, levels)

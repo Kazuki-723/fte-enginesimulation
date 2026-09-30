@@ -5,8 +5,8 @@ from skimage.measure import find_contours
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import time
-#from inputprograms.importjson import JsoncLoader
-from importjson import JsoncLoader
+from inputprograms.importjson import JsoncLoader
+#from importjson import JsoncLoader
 
 # delta_x = delta_y を前提にしている．
 
@@ -128,19 +128,19 @@ class FuelGeometry:
                 d_points, idx = tree.query(grid_points)  # idx は最近傍点の index，使わないけど取っておく
 
                 # 距離関数の値をプロット
-                fig, ax = plt.subplots()
-                im  = ax.imshow(d_points.reshape((N_x,N_y)), vmin=np.min(d_points), vmax=np.max(d_points))
-                cbar = fig.colorbar(im)
-                cbar.set_label("Distance From phi = 0", fontsize=10)
-                plt.show()
+                # fig, ax = plt.subplots()
+                # im  = ax.imshow(d_points.reshape((N_x,N_y)), vmin=np.min(d_points), vmax=np.max(d_points))
+                # cbar = fig.colorbar(im)
+                # cbar.set_label("Distance From phi = 0", fontsize=10)
+                # plt.show()
 
                 # 境界の近くのみ線分との距離も計算
                 mask_near_border = d_points < 0.001    # (N',1)
 
                 # 距離関数が一定以下(上のmask)のみハイライトプロット
-                plt.figure("mask_near_border")
-                im  = plt.imshow(mask_near_border.reshape((N_x,N_y)))
-                plt.show()
+                # plt.figure("mask_near_border")
+                # im  = plt.imshow(mask_near_border.reshape((N_x,N_y)))
+                # plt.show()
 
                 # Meshの近傍点より近い点を探査する
                 # linesのベクトル計算
@@ -217,12 +217,12 @@ class FuelGeometry:
                 levelset_new = levelset_new.reshape((N_x,N_y))
 
                 # 更新データのplot
-                update_diff = levelset_new-d_points.reshape((N_x,N_y))
-                fig, ax = plt.subplots()
-                im  = ax.imshow(update_diff, vmin=np.min(update_diff), vmax=np.max(update_diff))
-                cbar = fig.colorbar(im)
-                cbar.set_label("(update levelset) - (old point distance)", fontsize=10)
-                plt.show()
+                # update_diff = levelset_new-d_points.reshape((N_x,N_y))
+                # fig, ax = plt.subplots()
+                # im  = ax.imshow(update_diff, vmin=np.min(update_diff), vmax=np.max(update_diff))
+                # cbar = fig.colorbar(im)
+                # cbar.set_label("(update levelset) - (old point distance)", fontsize=10)
+                # plt.show()
 
                 # 符号付の値に変換，内部が負
                 polygon = Path(geometry)
@@ -244,16 +244,16 @@ class FuelGeometry:
         print(f"Elapsed time: {end - start:.6f} seconds")
 
         # 結果を図にして表示
-        fig, ax = plt.subplots()
-        im  = ax.imshow(levelset, vmin=np.min(levelset), vmax=np.max(levelset), cmap = "coolwarm")
-        cbar = fig.colorbar(im)
-        cbar.set_label("Distance From phi = 0", fontsize=10)
+        # fig, ax = plt.subplots()
+        # im  = ax.imshow(levelset, vmin=np.min(levelset), vmax=np.max(levelset), cmap = "coolwarm")
+        # cbar = fig.colorbar(im)
+        # cbar.set_label("Distance From phi = 0", fontsize=10)
         # plt.axis((self.min_x, self.max_x, self.min_y, self.max_y))
-        levels = np.arange(0,0.01,2e-3)
-        ctr = ax.contour(levelset, levels, colors="black")#これを何回かごとに保存する．
-        ax.clabel(ctr, levels, inline=1)
-        plt.title("phi = 960 dots Nx = Ny = 600")
-        plt.show()
+        # levels = np.arange(0,0.01,2e-3)
+        # ctr = ax.contour(levelset, levels, colors="black")#これを何回かごとに保存する．
+        # ax.clabel(ctr, levels, inline=1)
+        # plt.title("phi = 960 dots Nx = Ny = 600")
+        # plt.show()
 
         # 計算結果をcsvファイルに保存．（オプション）
         if settings["output_initallevelset"] and settings["mode"]=="geometry":

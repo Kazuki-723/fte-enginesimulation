@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.ndimage import distance_transform_edt
 from scipy.spatial import cKDTree
 from skimage.measure import find_contours
 import matplotlib.pyplot as plt
@@ -268,15 +267,16 @@ class FuelGeometry:
         levelset_new = levelset_old - rdot*del_t
         return levelset_new
 
-    def culc_max_r(self, levelset_fin_filename):
-        levelset_fin = np.loadtxt(levelset_fin_filename, delimiter=",", dtype=float, encoding='utf-8')
-        delta_x = 0.1
-        delta_y = 0.1 
-        distance = distance_transform_edt(levelset_fin < 0, sampling=[delta_x, delta_y])
-        max_r = max(distance)#ちがう
-        return max_r
+    def culc_max_r(self, levelset_fin):
+        ctr = find_contours(levelset_fin, 0.0)[0] # phi=0の等高線
+        # インデックスから座標に変換
+        ctr[:,0] = ctr[:,0]*self.delta_x + self.min_x 
+        ctr[:,1] = ctr[:,1]*self.delta_y + self.min_y
+        return np.max(np.linalg.norm(ctr, axis=1), axis=0)
 
 if __name__=='__main__':
     geom = FuelGeometry()
     levelset, A_p, l_p = geom.culc_initial_levelset("geometry_settings.jsonc")
-    print(f"A_p:{A_p}\nl_p:{l_p}")
+    print(f"A_p:{A_p}[m^2]\nl_p:{l_p}[m]")
+    max_r = geom.culc_max_r(levelset)
+    print(f"max_r = {max_r} [m]")

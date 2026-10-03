@@ -447,6 +447,7 @@ class RocketSimulation:
         print("Lf = ", Lf * 1000, "[mm]")
         # print("Df_init = ", Df * 1000, "[mm]")
         # print("Df_final = ", self.Df * 1000, "[mm]")
+        print("max_r_fin = ", self.geom.culc_max_r(self.levelset), "[m]")
         print("F_ave =", self.It * 1000 / self.k, "[N]")
         print("average Isp =", self.Isp, "[s]")
 
@@ -458,7 +459,7 @@ class RocketSimulation:
         levels = [-1*np.sum(self.geom.r_arr), 0]
         ctr = ax.contour(self.levelset, levels)
         ax.clabel(ctr, levels, inline=1)
-        plt.savefig("int_end.png")
+        plt.savefig("init_end.png")
 
         # csv系統配列の用意，return
         time_ms = list(range(len(self.F_arr)))

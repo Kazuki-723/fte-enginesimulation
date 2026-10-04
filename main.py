@@ -209,7 +209,7 @@ def run_time_evolution_mode():
 
     # cea計算のインターバル回数
     cea_interval = is_fast
-    (_, _, _, _, _, _, _, evolution_result, _, _, _) = sim.integration_simulation(
+    (_, _, _, _, _, _, _, evolution_result, It, tb, Isp) = sim.integration_simulation(
         Pc=Pc, Df=Df, OF=OF, eta_cstar=eta_cstar, eta_nozzle=eta_nozzle, Kstar=Kstar,
         epsilon=epsilon, Lf=Lf, mdot=mdot, V_tank=V_tank, P_init=Ptank_init, P_final=P_final,
         rho_ox=rho_ox, rho_fuel=rho_f, a=a_ox, n=n_ox, fuel_material = fuel_material,
@@ -228,6 +228,11 @@ def run_time_evolution_mode():
                 ("V_tank", V_tank), ("P_init", Ptank_init), ("P_final", P_final),
                 ("rho_ox", rho_ox), ("rho_fuel", rho_f),
                 ("a", a_ox), ("n", n_ox), ("F", F), ("Dt", Dt), ("Fuel Material",fuel_material)
+            ]
+
+        # performance値の記載用
+        performance_params = [
+                ("It", It), ("Tb", tb), ("Isp", Isp) 
             ]
         
         # 時間発展記載用
@@ -260,6 +265,17 @@ def run_time_evolution_mode():
                         row.extend([key, val])
                 writer.writerow(row)
             writer.writerow([])  # 空行
+
+            writer.writerow(["# performance params."])
+            for i in range(0, len(performance_params), 3):
+                row = []
+                for j in range(3):
+                    if i + j < len(performance_params):
+                        key, val = performance_params[i + j]
+                        row.extend([key, val])
+                writer.writerow(row)
+            writer.writerow([])  # 空行
+
             writer.writerow(["# evolution params."])
             writer.writerow(evolution_headers)
             writer.writerows(evolution_result)

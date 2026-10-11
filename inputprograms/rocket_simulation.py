@@ -308,6 +308,8 @@ class RocketSimulation:
         # self.Af  = self.Lf * self.Df * math.pi
         self.geom.delta_x = delta_x
         self.geom.delta_y = delta_y
+        self.geom.min_x = culc_area[0][0]
+        self.geom.min_y = culc_area[1][0]
         self.Af           = self.Lf * self.geom.culc_lp(self.levelset)
         print("---------------START INTEGRATION---------------")
         #====================#
@@ -459,7 +461,7 @@ class RocketSimulation:
         levels = [-1*np.sum(self.geom.r_arr), 0]
         ctr = ax.contour(self.levelset, levels)
         ax.clabel(ctr, levels, inline=1)
-        plt.savefig("init_end.png")
+        plt.savefig("init_fin.png")
 
         # csv系統配列の用意，return
         time_ms = list(range(len(self.F_arr)))
